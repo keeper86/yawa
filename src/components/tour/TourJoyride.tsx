@@ -3,16 +3,36 @@
 import { TourTooltip } from '@/components/tour/TourTooltip';
 import { useTour } from '@/components/tour/TourContext';
 import { getStepsForPage } from '@/components/tour/tourSteps';
+import { useIsClient } from '@/hooks/useIsClient';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { EventHandler, Props } from 'react-joyride';
 
 const Joyride = dynamic(() => import('react-joyride').then((mod) => mod.Joyride), {
     ssr: false,
 }) as React.ComponentType<Props>;
+
+function useElementPresent(selector: string | null): boolean {
+    const subscribe = useCallback(
+        (onStoreChange: () => void) => {
+            if (!selector) {
+                return () => undefined;
+            }
+
+            const observer = new MutationObserver(onStoreChange);
+            observer.observe(document.body, { childList: true, subtree: true });
+            return () => observer.disconnect();
+        },
+        [selector],
+    );
+
+    const getSnapshot = useCallback(() => (selector ? document.querySelector(selector) !== null : true), [selector]);
+
+    return useSyncExternalStore(subscribe, getSnapshot, () => false);
+}
 
 export function TourJoyride() {
     const pathname = usePathname();
@@ -20,61 +40,23 @@ export function TourJoyride() {
     const t = useTranslations('Tour');
     const tGuards = useTranslations('Guards');
 
-    const [mounted, setMounted] = useState(false);
-    const [targetsReady, setTargetsReady] = useState(false);
-    const targetSelectorRef = useRef<string | null>(null);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const isClient = useIsClient();
 
     const steps = useMemo(() => getStepsForPage(t, pathname, completedActions), [t, pathname, completedActions]);
 
-    useEffect(() => {
-        setCurrentStepIndex(0);
-        setTargetsReady(false);
-        targetSelectorRef.current = null;
-    }, [pathname, setCurrentStepIndex]);
+    const safeStepIndex = Math.min(currentStepIndex, Math.max(0, steps.length - 1));
+    const step = steps[safeStepIndex] as { target?: unknown; data?: Record<string, unknown> } | undefined;
+    const targetSelector =
+        isTourActive && typeof step?.target === 'string' && step.target !== 'body' ? step.target : null;
+    const timeoutMs = (step?.data?.timeoutMs as number | undefined) ?? 30000;
+    const targetExists = useElementPresent(targetSelector);
 
     useEffect(() => {
-        if (!isTourActive || steps.length === 0) {
-            setTargetsReady(true);
-            targetSelectorRef.current = null;
+        if (!isTourActive || !targetSelector || targetExists) {
             return;
         }
 
-        const step = steps[currentStepIndex];
-        const target = step?.target;
-        const stepData = (step as { data?: Record<string, unknown> })?.data ?? {};
-        const targetSelector = target && target !== 'body' && typeof target === 'string' ? target : null;
-
-        if (!targetSelector) {
-            setTargetsReady(true);
-            targetSelectorRef.current = null;
-            return;
-        }
-
-        const prevTargetSelector = targetSelectorRef.current;
-        targetSelectorRef.current = targetSelector;
-
-        if (document.querySelector(targetSelector)) {
-            if (prevTargetSelector && targetSelector !== prevTargetSelector) {
-                setTargetsReady(false);
-                requestAnimationFrame(() => setTargetsReady(true));
-                return;
-            }
-            setTargetsReady(true);
-            return;
-        }
-
-        setTargetsReady(false);
-
-        const timeoutMs = (stepData.timeoutMs as number) ?? 30000;
         const timeoutId = setTimeout(() => {
-            if (document.querySelector(targetSelector)) {
-                setTargetsReady(true);
-                return;
-            }
             const nextIndex = currentStepIndex + 1;
             if (nextIndex >= steps.length) {
                 completeTour();
@@ -83,21 +65,17 @@ export function TourJoyride() {
             }
         }, timeoutMs);
 
-        const observer = new MutationObserver(() => {
-            if (document.querySelector(targetSelector)) {
-                observer.disconnect();
-                clearTimeout(timeoutId);
-                setTargetsReady(true);
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        return () => {
-            observer.disconnect();
-            clearTimeout(timeoutId);
-        };
-    }, [isTourActive, steps, currentStepIndex, setCurrentStepIndex, completeTour]);
+        return () => clearTimeout(timeoutId);
+    }, [
+        isTourActive,
+        targetSelector,
+        targetExists,
+        timeoutMs,
+        currentStepIndex,
+        steps.length,
+        completeTour,
+        setCurrentStepIndex,
+    ]);
 
     useNavigationGuard(isTourActive, completeTour, {
         message: tGuards('tourActive'),
@@ -129,14 +107,13 @@ export function TourJoyride() {
         }
     };
 
-    if (!mounted || !isTourActive || !targetsReady || steps.length === 0) {
+    if (!isClient || !isTourActive || !targetExists || steps.length === 0) {
         return null;
     }
 
-    const safeStepIndex = Math.min(currentStepIndex, steps.length - 1);
-
     return (
         <Joyride
+            key={targetSelector ?? 'no-target'}
             steps={steps}
             run={isTourActive}
             continuous

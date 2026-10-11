@@ -41,9 +41,6 @@ export function AvatarUploadDialog() {
             onSuccess: () => {
                 void queryClient.invalidateQueries({ queryKey: trpc.getUser.queryKey() });
                 setPreviewUrl(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
             },
             onError: (err) => {
                 setError(showError(err));

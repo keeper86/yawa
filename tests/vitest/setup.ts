@@ -1,11 +1,6 @@
-// Extend Jest "expect" functionality with Testing Library assertions.
-// This setup will run before each test. You can add global configuration here, like
-// setting up mocks for shared modules, configuring testing utilities, etc.
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
-// Mock next/navigation so components using useRouter/usePathname etc. don't
-// throw "invariant expected app router to be mounted" in the jsdom environment.
 vi.mock('next/navigation', () => ({
     useRouter: () => ({
         push: vi.fn(),
@@ -20,9 +15,6 @@ vi.mock('next/navigation', () => ({
     useParams: () => ({}),
 }));
 
-// Provide a jsdom-friendly mock for window.matchMedia used by `useIsMobile`.
-// jsdom does not implement matchMedia by default which causes tests to throw.
-// The mock supports addEventListener/removeEventListener and legacy addListener/removeListener.
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
     configurable: true,

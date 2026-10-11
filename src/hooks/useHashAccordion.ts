@@ -35,17 +35,6 @@ export function useHashAccordion({ toSlug = (v) => v, fromSlug = (s) => s }: Opt
 
     const [openItem, setOpenItem] = useState<string>(() => readHash(fromSlug));
 
-    // On mount, open the accordion item matching the URL hash.
-    useEffect(() => {
-        const value = readHash(fromSlug);
-        if (value) {
-            setHashItem(value);
-            setOpenItem(value);
-        } else {
-            setHashItem('');
-        }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
     // Tracks which item we last scrolled to, so we can re-scroll when the target changes.
     const lastScrolledItem = useRef<string | undefined>(undefined);
 

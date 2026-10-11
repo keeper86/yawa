@@ -12,7 +12,7 @@ const instrumentedLink: TRPCLink<AppRouter> = () => {
                 next: (value) => observer.next?.(value),
                 error: (err: TRPCClientError<AppRouter>) => {
                     if (err.data?.httpStatus === 401 && window.location.pathname !== '/') {
-                        window.location.href = '/';
+                        window.location.replace('/');
                         return;
                     }
                     observer.error?.(err);

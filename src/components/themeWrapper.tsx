@@ -1,15 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useIsClient } from '@/hooks/useIsClient';
+import type { ReactNode } from 'react';
 
-export default function ThemeWrapper({ children }: { children: React.ReactNode }) {
-    const [mounted, setMounted] = useState(false);
+export default function ThemeWrapper({ children }: { children: ReactNode }) {
+    const isClient = useIsClient();
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) {
+    if (!isClient) {
         return null;
     }
 

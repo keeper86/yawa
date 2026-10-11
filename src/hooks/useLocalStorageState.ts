@@ -66,6 +66,28 @@ function reloadFromStorage(store: LocalStorageStore<unknown>): void {
     notifyListeners(store);
 }
 
+function hydrateStore(store: LocalStorageStore<unknown>): void {
+    if (store.hydrated) {
+        return;
+    }
+    store.hydrated = true;
+    reloadFromStorage(store);
+}
+
+function writeStoreValue<T>(store: LocalStorageStore<T>, next: T | ((prev: T) => T)): void {
+    const resolved = typeof next === 'function' ? (next as (prev: T) => T)(store.value) : next;
+    if (resolved === store.value) {
+        return;
+    }
+    store.value = resolved;
+    notifyListeners(store);
+    try {
+        localStorage.setItem(store.key, JSON.stringify(resolved));
+    } catch {
+        // Silently ignore storage errors
+    }
+}
+
 let storageListenerAttached = false;
 
 function attachStorageListener(): void {
@@ -104,26 +126,12 @@ export function useLocalStorageState<T>(
 
     useEffect(() => {
         attachStorageListener();
-        if (store.hydrated) {
-            return;
-        }
-        store.hydrated = true;
-        reloadFromStorage(store);
+        hydrateStore(store);
     }, [store]);
 
     const setValue = useCallback(
         (next: T | ((prev: T) => T)) => {
-            const resolved = typeof next === 'function' ? (next as (prev: T) => T)(store.value) : next;
-            if (resolved === store.value) {
-                return;
-            }
-            store.value = resolved;
-            notifyListeners(store);
-            try {
-                localStorage.setItem(store.key, JSON.stringify(resolved));
-            } catch {
-                // Silently ignore storage errors
-            }
+            writeStoreValue(store, next);
         },
         [store],
     );

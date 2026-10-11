@@ -67,7 +67,9 @@ const createMockFileReader = (): MockFileReaderInstance => ({
 const originalFileReader = global.FileReader;
 Object.defineProperty(global, 'FileReader', {
     writable: true,
-    value: vi.fn(() => createMockFileReader()),
+    value: vi.fn(function () {
+        return createMockFileReader();
+    }),
 });
 
 const createTestFile = (type: string, sizeInBytes: number, name = 'test.png'): File => {

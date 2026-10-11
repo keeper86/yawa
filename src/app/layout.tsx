@@ -52,8 +52,8 @@ export default async function RootLayout({
     return (
         <html lang={locale} suppressHydrationWarning>
             <body className={`${geistSans.variable} ${geistMono.variable}`}>
-                <ThemeWrapper>
-                    <ThemeProvider attribute='class' defaultTheme='system' enableSystem disableTransitionOnChange>
+                <ThemeProvider attribute='class' defaultTheme='system' enableSystem disableTransitionOnChange>
+                    <ThemeWrapper>
                         <NextIntlClientProvider>
                             <AppProviders session={session}>
                                 <SidebarProvider className='h-dvh overflow-hidden'>
@@ -78,8 +78,8 @@ export default async function RootLayout({
                                 <Toaster />
                             </AppProviders>
                         </NextIntlClientProvider>
-                    </ThemeProvider>
-                </ThemeWrapper>
+                    </ThemeWrapper>
+                </ThemeProvider>
             </body>
         </html>
     );

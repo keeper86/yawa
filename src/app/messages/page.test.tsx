@@ -37,6 +37,8 @@ vi.mock('@/components/client/UserAvatar', () => ({ default: () => null }));
 vi.mock('@/hooks/useMessages', () => ({
     useUnreadMessageCount: () => h.unreadCount.current,
     useMessageBody: (messageId: string | null) => (messageId ? h.messageBody.current : null),
+    useMessageListTotal: (direction: 'inbox' | 'sent') =>
+        direction === 'inbox' ? h.inboxTotal.current : h.sentTotal.current,
     useMessageListPolling: () => undefined,
     useMarkRead: () => ({ mutate: h.markRead, isPending: false }),
     useMarkAllRead: () => ({ mutate: h.markAllRead, isPending: false }),

@@ -1,37 +1,27 @@
-import * as React from 'react';
+import { useSyncExternalStore } from 'react';
 
 const MOBILE_BREAKPOINT = 768;
-
-export function useIsMobile() {
-    const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
-
-    React.useEffect(() => {
-        const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-        const onChange = () => {
-            setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-        };
-        mql.addEventListener('change', onChange);
-        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-        return () => mql.removeEventListener('change', onChange);
-    }, []);
-
-    return !!isMobile;
-}
-
 const SMALL_SCREEN_BREAKPOINT = 400;
 
-export function useIsSmallScreen() {
-    const [isSmallScreen, setIsSmallScreen] = React.useState<boolean | undefined>(undefined);
+function createMediaQuerySubscription(breakpoint: number) {
+    return (onChange: () => void) => {
+        const mediaQueryList = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+        mediaQueryList.addEventListener('change', onChange);
+        return () => mediaQueryList.removeEventListener('change', onChange);
+    };
+}
 
-    React.useEffect(() => {
-        const mql = window.matchMedia(`(max-width: ${SMALL_SCREEN_BREAKPOINT - 1}px)`);
-        const onChange = () => {
-            setIsSmallScreen(window.innerWidth < SMALL_SCREEN_BREAKPOINT);
-        };
-        mql.addEventListener('change', onChange);
-        setIsSmallScreen(window.innerWidth < SMALL_SCREEN_BREAKPOINT);
-        return () => mql.removeEventListener('change', onChange);
-    }, []);
+const subscribeToMobile = createMediaQuerySubscription(MOBILE_BREAKPOINT);
+const subscribeToSmallScreen = createMediaQuerySubscription(SMALL_SCREEN_BREAKPOINT);
 
-    return !!isSmallScreen;
+const getIsMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
+const getIsSmallScreen = () => window.innerWidth < SMALL_SCREEN_BREAKPOINT;
+const getServerSnapshot = () => false;
+
+export function useIsMobile(): boolean {
+    return useSyncExternalStore(subscribeToMobile, getIsMobile, getServerSnapshot);
+}
+
+export function useIsSmallScreen(): boolean {
+    return useSyncExternalStore(subscribeToSmallScreen, getIsSmallScreen, getServerSnapshot);
 }

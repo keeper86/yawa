@@ -21,6 +21,7 @@ import {
     useMarkRead,
     useMessageBody,
     useMessageListPolling,
+    useMessageListTotal,
     useUnreadMessageCount,
 } from '@/hooks/useMessages';
 import { recipientLabel } from '@/app/messages/_components/recipientLabel';
@@ -31,7 +32,7 @@ import { CheckCheck, Trash2 } from 'lucide-react';
 import { useErrorMessage } from '@/i18n/errors';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 const PAGE_SIZE = 25;
@@ -214,32 +215,25 @@ export default function MessagesPage() {
 
     const selectedBody = useMessageBody(selected?.message.id ?? null);
 
+    const inboxListTotal = useMessageListTotal('inbox', PAGE_SIZE);
+    const sentListTotal = useMessageListTotal('sent', PAGE_SIZE);
+    const inboxPageCount = inboxListTotal === undefined ? null : Math.max(1, Math.ceil(inboxListTotal / PAGE_SIZE));
+    const sentPageCount = sentListTotal === undefined ? null : Math.max(1, Math.ceil(sentListTotal / PAGE_SIZE));
+    const inboxPageInRange = inboxPageCount === null ? inboxPage : Math.min(inboxPage, inboxPageCount - 1);
+    const sentPageInRange = sentPageCount === null ? sentPage : Math.min(sentPage, sentPageCount - 1);
+
     const inbox = useQuery({
-        ...trpc.message.listInbox.queryOptions({ limit: PAGE_SIZE, offset: inboxPage * PAGE_SIZE }),
+        ...trpc.message.listInbox.queryOptions({ limit: PAGE_SIZE, offset: inboxPageInRange * PAGE_SIZE }),
         enabled: loggedIn,
     });
     const sent = useQuery({
-        ...trpc.message.listSent.queryOptions({ limit: PAGE_SIZE, offset: sentPage * PAGE_SIZE }),
+        ...trpc.message.listSent.queryOptions({ limit: PAGE_SIZE, offset: sentPageInRange * PAGE_SIZE }),
         enabled: loggedIn,
     });
 
     const inboxMessages = inbox.data?.messages ?? [];
     const sentMessages = sent.data?.messages ?? [];
-    const inboxTotal = inbox.data?.total ?? 0;
-    const sentTotal = sent.data?.total ?? 0;
     const inboxHasRead = inboxMessages.some((message) => message.readAt !== null);
-
-    useEffect(() => {
-        if (inboxPage > 0 && inboxPage * PAGE_SIZE >= inboxTotal) {
-            setInboxPage((page) => Math.max(page - 1, 0));
-        }
-    }, [inboxPage, inboxTotal]);
-
-    useEffect(() => {
-        if (sentPage > 0 && sentPage * PAGE_SIZE >= sentTotal) {
-            setSentPage((page) => Math.max(page - 1, 0));
-        }
-    }, [sentPage, sentTotal]);
 
     const handleSelect = (message: MessageSummary, direction: 'inbox' | 'sent') => {
         setSelected({ message, direction });
@@ -313,8 +307,8 @@ export default function MessagesPage() {
                         messages={inboxMessages}
                         direction='inbox'
                         onSelect={handleSelect}
-                        page={inboxPage}
-                        total={inboxTotal}
+                        page={inboxPageInRange}
+                        total={inboxListTotal ?? 0}
                         onPageChange={setInboxPage}
                         headerAction={
                             <div className='flex items-center gap-2'>
@@ -353,8 +347,8 @@ export default function MessagesPage() {
                         messages={sentMessages}
                         direction='sent'
                         onSelect={handleSelect}
-                        page={sentPage}
-                        total={sentTotal}
+                        page={sentPageInRange}
+                        total={sentListTotal ?? 0}
                         onPageChange={setSentPage}
                         headerAction={
                             <Button

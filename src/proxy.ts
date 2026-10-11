@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getPublicRoutes } from './lib/appRoutes';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const token = await getToken({ req: request });
     const publicPaths = ['/api/', '/_next', '/favicon.ico', '/benchmarks', '/images'];
 

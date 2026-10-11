@@ -78,6 +78,23 @@ export function useUnreadMessageCount(): number {
     return data?.count ?? 0;
 }
 
+export function useMessageListTotal(direction: 'inbox' | 'sent', pageSize: number): number | undefined {
+    const loggedIn = useSession().status === 'authenticated';
+    const trpc = useTRPC();
+
+    const options =
+        direction === 'inbox'
+            ? trpc.message.listInbox.queryOptions({ limit: pageSize, offset: 0 })
+            : trpc.message.listSent.queryOptions({ limit: pageSize, offset: 0 });
+
+    const { data } = useQuery({
+        ...options,
+        enabled: loggedIn,
+    });
+
+    return data?.total;
+}
+
 export function useMessageBody(messageId: string | null): string | null {
     const loggedIn = useSession().status === 'authenticated';
     const trpc = useTRPC();
