@@ -9,6 +9,9 @@ const nextConfig = {
     serverExternalPackages: ['knex', 'pino', 'pino-pretty'],
     reactStrictMode: true,
     trailingSlash: false,
+    typescript: {
+        tsconfigPath: 'tsconfig.build.json',
+    },
 };
 
 module.exports = withRoutes(withNextIntl(nextConfig));
