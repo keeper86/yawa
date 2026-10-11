@@ -32,7 +32,22 @@ const unauthorizedError = new TRPCError({
 export const protectedProcedure = trpcRoot.procedure.use(async ({ ctx, next }) => {
     const session = ctx.session;
 
-    if (session?.type === 'next-auth' && session.user?.id) {
+    if (session.type === 'pat-auth') {
+        throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You must be personally logged in to access this resource. A PAT is not sufficient.',
+        });
+    }
+
+    if (session.type === 'next-auth' && session.user?.id) {
+        return next();
+    }
+
+    throw unauthorizedError;
+});
+
+export const patAccessibleProcedure = trpcRoot.procedure.use(async ({ ctx, next }) => {
+    if (ctx.session.user?.id) {
         return next();
     }
 

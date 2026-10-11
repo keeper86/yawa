@@ -1,4 +1,4 @@
-import { type LucideIcon, FileText, Home, Mail, User } from 'lucide-react';
+import { type LucideIcon, FileText, Home, KeyRound, Mail, User } from 'lucide-react';
 import type { Route } from 'nextjs-routes';
 import type en from '../i18n/messages/en.json';
 
@@ -40,6 +40,11 @@ export const APP_ROUTES = {
             path: '/account',
             label: 'Account',
             icon: User,
+        },
+        pat: {
+            path: '/account/pat',
+            label: 'pat',
+            icon: KeyRound,
         },
     },
     messages: {

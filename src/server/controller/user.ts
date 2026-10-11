@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import z from 'zod';
 import { db } from '../db';
 import { logger } from '../logger';
-import { getUserIdFromContext, protectedProcedure } from '../trpcRoot';
+import { getUserIdFromContext, patAccessibleProcedure, protectedProcedure } from '../trpcRoot';
 
 const bytesToBase64Chars = (bytes: number) => 4 * Math.ceil(bytes / 3);
 const MAX_SIZE_BYTES_AVATAR = 1 * 1024 * 1024;
@@ -138,7 +138,7 @@ export const updateUser = () => {
 };
 
 export const getUserIdFromSession = () => {
-    return protectedProcedure
+    return patAccessibleProcedure
         .meta({
             openapi: {
                 method: 'GET',

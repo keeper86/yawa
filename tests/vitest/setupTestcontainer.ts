@@ -62,6 +62,18 @@ export const getCaller = (id: string = testUsers.testUser.user_id) => {
     });
 };
 
+export const getPatCaller = (id: string = testUsers.testUser.user_id) => {
+    return getAppRouter().createCaller({
+        session: {
+            type: 'pat-auth',
+            patToken: 'test-pat-token',
+            patId: 'test-pat-id',
+            user: { id },
+            expires: new Date(Date.now() + 3600_000).toISOString(),
+        },
+    });
+};
+
 export const getUnauthenticatedCaller = () => {
     return getAppRouter().createCaller({
         session: { type: 'no-auth', user: null },

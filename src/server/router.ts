@@ -12,6 +12,7 @@ import {
     markRead,
     sendMessage,
 } from './controller/message';
+import { createPAT, deletePAT, listPATs, revokePAT } from './controller/pAccessToken';
 import { getUser, getUserIdFromSession, getUsers, updateUser } from './controller/user';
 import { trpcRoot } from './trpcRoot';
 
@@ -32,13 +33,17 @@ const protectedAppRouter = trpcRoot.router({
     getUsers: getUsers(),
     getUser: getUser(),
     updateUser: updateUser(),
-    getUserIdFromSession: getUserIdFromSession(),
     message: messageRouter,
+    createPAT: createPAT(),
+    listPATs: listPATs(),
+    revokePAT: revokePAT(),
+    deletePAT: deletePAT(),
 });
 
 export const publicAccessibleRouter = trpcRoot.router({
     logs: logs(),
     health: health(),
+    getUserIdFromSession: getUserIdFromSession(),
 });
 
 export const appRouter = trpcRoot.mergeRouters(publicAccessibleRouter, protectedAppRouter);

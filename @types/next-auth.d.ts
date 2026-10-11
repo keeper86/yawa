@@ -17,6 +17,16 @@ declare module 'next-auth' {
             email: string;
         };
     }
+
+    interface PATSession {
+        type: 'pat-auth';
+        patId: string;
+        patToken: string;
+        user: {
+            id: string;
+        };
+        expires: string;
+    }
 }
 
 declare module 'next-auth/jwt' {

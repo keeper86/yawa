@@ -13,32 +13,14 @@ declare module "nextjs-routes" {
   export type Route =
     | StaticRoute<"/">
     | StaticRoute<"/account">
-    | StaticRoute<"/api/admin/categorize-logos">
+    | StaticRoute<"/account/pat">
     | DynamicRoute<"/api/auth/[...nextauth]", { "nextauth": string[] }>
     | StaticRoute<"/api/ping">
     | DynamicRoute<"/api/public/[...trpc]", { "trpc": string[] }>
     | StaticRoute<"/api/public/openapi.json">
     | DynamicRoute<"/api/trpc/[trpc]", { "trpc": string }>
-    | StaticRoute<"/bankrupt">
     | StaticRoute<"/imprint">
-    | StaticRoute<"/messages">
-    | StaticRoute<"/planets">
-    | DynamicRoute<"/planets/[planetId]", { "planetId": string }>
-    | DynamicRoute<"/planets/[planetId]/agent/[agentId]", { "planetId": string; "agentId": string }>
-    | DynamicRoute<"/planets/[planetId]/agent/[agentId]/financial", { "planetId": string; "agentId": string }>
-    | DynamicRoute<"/planets/[planetId]/agent/[agentId]/market", { "planetId": string; "agentId": string }>
-    | DynamicRoute<"/planets/[planetId]/agent/[agentId]/production", { "planetId": string; "agentId": string }>
-    | DynamicRoute<"/planets/[planetId]/agent/[agentId]/ships", { "planetId": string; "agentId": string }>
-    | DynamicRoute<"/planets/[planetId]/agent/[agentId]/storage", { "planetId": string; "agentId": string }>
-    | DynamicRoute<"/planets/[planetId]/agent/[agentId]/workforce", { "planetId": string; "agentId": string }>
-    | DynamicRoute<"/planets/[planetId]/central-bank", { "planetId": string }>
-    | DynamicRoute<"/planets/[planetId]/claims", { "planetId": string }>
-    | DynamicRoute<"/planets/[planetId]/companies", { "planetId": string }>
-    | DynamicRoute<"/planets/[planetId]/demographics", { "planetId": string }>
-    | StaticRoute<"/pong">
-    | StaticRoute<"/simulation">
-    | StaticRoute<"/supply-chain">
-    | StaticRoute<"/supply-chain/chain-sim">;
+    | StaticRoute<"/messages">;
 
   interface StaticRoute<Pathname> {
     pathname: Pathname;
