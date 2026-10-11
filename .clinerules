@@ -1,0 +1,48 @@
+# Yawa Codebase
+
+## Rules:
+
+- Avoid comments! If a comment seems necessary, restructure or rename instead.
+- If you see a comment that seems unnecessary, delete it.
+- Avoid optional properties. We are in dev only — no need for backwards-compatibility.
+- Run 'npm run test:all' to run all tests (does not run npm run build).
+- Do not run 'npm run build', there is always a dev server running. server crashes, building fails randomly.
+- When you fix a bug, most likely you will also want to add a test.
+- Do NOT use interactive terminal commands. Especially 'git diff' or 'git show'
+- Be direct and honest. If a task makes no real sense, say so.
+- You are a grown-up LLM, the mode is more of a suggestion.
+
+## Overview
+
+Yawa is a web application base built with Next.js 15 (App Router), React 19 and TypeScript. It combines tRPC with `@trpc/tanstack-react-query` and `trpc-to-openapi`, next-auth with a Keycloak provider, next-intl (en/de), Knex + PostgreSQL, pino logging, a shadcn/ui + Tailwind v4 component library, user-to-user messaging, a react-joyride guided-tour infrastructure and recharts-based chart helpers.
+
+## Testing
+
+```bash
+npm run test:all
+```
+
+This runs formatting, linting, type-checking and all tests.
+
+## Adding UI Components
+
+1. Use shadcn/ui base components in `src/components/ui/`
+2. Add page in `src/app/` directory
+3. Use tRPC hooks for data fetching
+4. Add to navigation if needed
+
+## Bulk refactors (codemods)
+
+When one change touches a shared signature or pattern across dozens of files, write a throwaway TypeScript-AST codemod. Regex is not good enough here and hand-editing is unverifiable.
+
+- Regex matches declarations, imports, comments and string literals, and `[^)]*` silently breaks on nested calls. Match node kinds instead: `ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)`, then recurse with `ts.forEachChild`.
+- Syntax only. Do not build a `Program` or a type checker — nodes already carry the positions (`getStart()` / `getEnd()`) you need.
+- Put the script in `tools/` (not `/tmp`) so `require('typescript')` resolves. Run it once without `--apply` and print both the files that would change and the call sites it cannot handle.
+- Collect edits as `{ pos, text }` and apply them sorted by descending position; text splicing invalidates every later offset.
+- Never rebuild a file by re-printing the AST — that reformats everything and buries the real change in diff noise.
+- Keep the codemod dumb and let it fail loudly. `tsc`, `eslint` and the test suite are the verification loop.
+
+## Memory
+
+- The user is often concurrently editing the codebase — files can change while you work. Re-read before finalizing and don't be surprised by mid-task edits.
+- The user always forgets to adapt tests. When tests fail after a change, check whether the current implementation moved on and fix the tests proactively.

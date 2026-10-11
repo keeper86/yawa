@@ -1,0 +1,235 @@
+{
+    "Errors": {
+        "unexpected": "An unexpected error occurred",
+        "notLoggedIn": "You must be logged in to access this resource or provide a valid PAT.",
+        "userNotFound": "User not found",
+        "messageNotFound": "Message not found",
+        "recipientNotFound": "Recipient not found",
+        "cannotMessageSelf": "Cannot send a message to yourself",
+        "messageRateLimited": "Too many messages sent. Please wait a moment before trying again.",
+        "invalidAvatarData": "Invalid base64 image data",
+        "avatarPngOnly": "Only PNG images are supported for avatar",
+        "avatarPngFile": "Please upload a PNG image file",
+        "avatarFileTooLarge": "File size must be less than 1MB"
+    },
+    "Units": {
+        "day": "day",
+        "days": "days",
+        "lessThanOneSecond": "<1s",
+        "daysShort": "d",
+        "hoursShort": "h",
+        "minutesShort": "m",
+        "secondsShort": "s",
+        "m3": "m³",
+        "m3Separator": "m³ ·",
+        "unitsPerTick": "u/t",
+        "ticks": "t",
+        "percentOfMax": "% max",
+        "passengers": "passengers"
+    },
+    "Nav": {
+        "Home": "Home",
+        "Account": "Account",
+        "Messages": "Messages",
+        "Imprint": "Imprint",
+        "logoAlt": "Yawa logo",
+        "brand": "Yawa"
+    },
+    "Sidebar": {
+        "login": "Login",
+        "logout": "Log out",
+        "loading": "Loading…",
+        "noNameSet": "No name set"
+    },
+    "Settings": {
+        "title": "Settings",
+        "theme": "Theme",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System",
+        "language": "Language",
+        "en": "English",
+        "de": "German",
+        "enterFullscreen": "Enter fullscreen",
+        "exitFullscreen": "Exit fullscreen"
+    },
+    "Login": {
+        "pageTitle": "Login",
+        "title": "Sign in",
+        "action": "Login / Register"
+    },
+    "Metadata": {
+        "title": "Yawa",
+        "description": "A web application base for building new apps."
+    },
+    "Toasts": {
+        "messageSent": "Message sent",
+        "messageSendFailed": "Failed to send message",
+        "messageMarkReadFailed": "Failed to mark message read",
+        "messageDeleted": "Message deleted",
+        "messageDeleteFailed": "Failed to delete message",
+        "messagesDeleted": "{count} messages deleted",
+        "nothingToDelete": "Nothing to delete",
+        "messagesDeleteFailed": "Failed to delete messages"
+    },
+    "Messages": {
+        "title": "Messages",
+        "unread": "{count} unread",
+        "tabs": {
+            "inbox": "Inbox",
+            "sent": "Sent"
+        },
+        "inbox": {
+            "description": "{count} messages",
+            "fallback": "Incoming messages",
+            "empty": "No messages yet."
+        },
+        "sent": {
+            "description": "{count} messages",
+            "fallback": "Sent messages",
+            "empty": "No sent messages yet."
+        },
+        "markAllRead": "Mark all read",
+        "deleteAllRead": "Delete all read",
+        "deleteAll": "Delete all",
+        "page": "Page {page} of {total}",
+        "from": "From",
+        "to": "To",
+        "loading": "Loading…",
+        "delete": "Delete",
+        "status": {
+            "deleted": "Deleted",
+            "read": "Read",
+            "unread": "Unread"
+        },
+        "confirm": {
+            "messageTitle": "Delete message?",
+            "messageDescription": "This removes the message from your view. This cannot be undone.",
+            "readTitle": "Delete all read messages?",
+            "readDescription": "This removes all read messages from your inbox. This cannot be undone.",
+            "sentTitle": "Delete all sent messages?",
+            "sentDescription": "This removes all messages from your sent folder. This cannot be undone."
+        },
+        "compose": {
+            "button": "New message",
+            "title": "New message",
+            "description": "Send a direct message to another player.",
+            "recipient": "Recipient",
+            "subject": "Subject",
+            "message": "Message",
+            "send": "Send",
+            "searchPlaceholder": "Search by name or company…",
+            "searching": "Searching…",
+            "noPlayerFound": "No player found.",
+            "clearRecipient": "Clear recipient"
+        }
+    },
+    "Common": {
+        "waitingForData": "Waiting for simulation data…",
+        "loading": "Loading…",
+        "loadingLabel": "Loading",
+        "duration": "Duration",
+        "close": "Close",
+        "more": "More",
+        "breadcrumb": "Breadcrumb",
+        "backToTop": "Back to top",
+        "toggleSidebar": "Toggle sidebar",
+        "sidebar": "Sidebar",
+        "sidebarDescription": "Displays the mobile sidebar.",
+        "deposits": "Deposits",
+        "previous": "Previous",
+        "next": "Next",
+        "all": "All",
+        "save": "Save",
+        "cancel": "Cancel",
+        "reset": "Reset",
+        "set": "Set",
+        "saving": "Saving…",
+        "setting": "Setting…",
+        "confirm": "Confirm",
+        "empty": "Empty",
+        "dispatch": "Dispatch",
+        "build": "Build",
+        "underConstruction": "Under Construction",
+        "scale": "Scale",
+        "sell": "Sell",
+        "buy": "Buy",
+        "accept": "Accept",
+        "buildAtScale": "Build at scale",
+        "retry": "Retry",
+        "simulationOffline": "Simulation data unavailable — {count, plural, one {# query} other {# queries}} stopped polling.",
+        "resetToNoExperience": "Reset to no experience",
+        "setLevel": "Set level to {level}",
+        "userAvatarAlt": "User Avatar",
+        "errorTitle": "Failed to load",
+        "errorDescription": "Something went wrong. Please try again later.",
+        "selectResource": "Select resource…",
+        "logoCategories": {
+            "raw": "Raw",
+            "refinement": "Refinement",
+            "manufacturing": "Manufacturing",
+            "services": "Services",
+            "general": "General"
+        }
+    },
+    "Charts": {
+        "year": "Year {year}",
+        "decade": "{decade}s",
+        "previousDecember": "Previous December",
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "decadeShort": "Decade",
+        "lastYear": "Last year:",
+        "netBalance": "Net Balance",
+        "monthlyNetIncome": "Monthly Net Income",
+        "productionValue": "Production Value",
+        "consumptionValue": "Consumption Value",
+        "wages": "Wages",
+        "totalWorkers": "Total Workers",
+        "endOfMonth": "End of {month} {year}",
+        "yearLabel": "Year {year}",
+        "yearShort": "Y{year}"
+    },
+    "Guards": {
+        "unsavedChanges": "You have unsaved changes.",
+        "leaveAnyway": "Leave anyway",
+        "tourActive": "The guided tour is active. Navigating away will end the tutorial.",
+        "endTourAndLeave": "End tutorial & leave"
+    },
+    "Tour": {
+        "back": "Back",
+        "close": "Close",
+        "finish": "Finish",
+        "next": "Next",
+        "open": "Open the dialog",
+        "skip": "Skip tour",
+        "of": "of"
+    },
+    "Imprint": {
+        "intro": "This is the legal imprint for Yawa.",
+        "responsible": "Responsible for content:",
+        "email": "Email:",
+        "placeholder": "This is a placeholder. Please update with your actual legal information as required by law.",
+        "assets": "Assets generated by gemini.",
+        "backToHome": "Back to Home",
+        "responsibleName": "Tobias",
+        "responsibleEmail": "info@yawa.local"
+    },
+    "Account": {
+        "title": "Account Management",
+        "uploadAvatar": "Upload Avatar",
+        "profilePicture": "Profile Picture",
+        "profilePictureDescription": "Upload a profile picture to personalize your account",
+        "dropHere": "Drop your image here, or",
+        "browse": "browse",
+        "pngOnly": "PNG only (max 1MB)",
+        "uploadPhoto": "Upload Photo",
+        "uploading": "Uploading…",
+        "changePhoto": "Change Photo",
+        "removing": "Removing…",
+        "remove": "Remove",
+        "avatarUploaded": "Avatar uploaded successfully",
+        "avatarRemoved": "Avatar removed successfully",
+        "restartTour": "Restart tutorial"
+    }
+}

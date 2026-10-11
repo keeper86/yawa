@@ -1,0 +1,34 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import { getPublicRoutes } from './lib/appRoutes';
+
+export async function middleware(request: NextRequest) {
+    const token = await getToken({ req: request });
+    const publicPaths = ['/api/', '/_next', '/favicon.ico', '/benchmarks', '/images'];
+
+    const isPublicPath =
+        getPublicRoutes().includes(request.nextUrl.pathname) ||
+        publicPaths.some((path) => request.nextUrl.pathname.startsWith(path));
+
+    if (isPublicPath) {
+        return NextResponse.next();
+    }
+
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const isApiRequest = request.nextUrl.pathname.startsWith('/api/public');
+        if (isApiRequest) {
+            return NextResponse.next();
+        }
+    }
+
+    if (!token) {
+        return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    return NextResponse.next();
+}
+
+export const config = {
+    matcher: ['/((?!_next/static|_next/image|favicon.ico|images).*)'],
+};

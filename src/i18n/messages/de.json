@@ -1,0 +1,235 @@
+{
+    "Errors": {
+        "unexpected": "Ein unerwarteter Fehler ist aufgetreten",
+        "notLoggedIn": "Sie müssen angemeldet sein oder ein gültiges PAT angeben, um auf diese Ressource zuzugreifen.",
+        "userNotFound": "Benutzer nicht gefunden",
+        "messageNotFound": "Nachricht nicht gefunden",
+        "recipientNotFound": "Empfänger nicht gefunden",
+        "cannotMessageSelf": "Sie können sich nicht selbst eine Nachricht senden",
+        "messageRateLimited": "Zu viele Nachrichten gesendet. Bitte warten Sie einen Moment und versuchen Sie es erneut.",
+        "invalidAvatarData": "Ungültige Base64-Bilddaten",
+        "avatarPngOnly": "Für das Profilbild werden nur PNG-Bilder unterstützt",
+        "avatarPngFile": "Bitte laden Sie eine PNG-Bilddatei hoch",
+        "avatarFileTooLarge": "Die Dateigröße muss unter 1 MB liegen"
+    },
+    "Units": {
+        "day": "Tag",
+        "days": "Tage",
+        "lessThanOneSecond": "<1s",
+        "daysShort": "T",
+        "hoursShort": "Std",
+        "minutesShort": "Min",
+        "secondsShort": "Sek",
+        "m3": "m³",
+        "m3Separator": "m³ ·",
+        "unitsPerTick": "E/T",
+        "ticks": "T",
+        "percentOfMax": "% max",
+        "passengers": "Passagiere"
+    },
+    "Nav": {
+        "Home": "Startseite",
+        "Account": "Konto",
+        "Messages": "Nachrichten",
+        "Imprint": "Impressum",
+        "logoAlt": "Yawa-Logo",
+        "brand": "Yawa"
+    },
+    "Sidebar": {
+        "login": "Anmelden",
+        "logout": "Abmelden",
+        "loading": "Lädt…",
+        "noNameSet": "Kein Name gesetzt"
+    },
+    "Settings": {
+        "title": "Einstellungen",
+        "theme": "Design",
+        "light": "Hell",
+        "dark": "Dunkel",
+        "system": "System",
+        "language": "Sprache",
+        "en": "Englisch",
+        "de": "Deutsch",
+        "enterFullscreen": "Vollbild aktivieren",
+        "exitFullscreen": "Vollbild beenden"
+    },
+    "Login": {
+        "pageTitle": "Anmeldung",
+        "title": "Anmelden",
+        "action": "Anmelden / Registrieren"
+    },
+    "Metadata": {
+        "title": "Yawa",
+        "description": "Eine Webanwendungs-Basis zum Aufbau neuer Apps."
+    },
+    "Toasts": {
+        "messageSent": "Nachricht gesendet",
+        "messageSendFailed": "Nachricht konnte nicht gesendet werden",
+        "messageMarkReadFailed": "Nachricht konnte nicht als gelesen markiert werden",
+        "messageDeleted": "Nachricht gelöscht",
+        "messageDeleteFailed": "Nachricht konnte nicht gelöscht werden",
+        "messagesDeleted": "{count} Nachrichten gelöscht",
+        "nothingToDelete": "Nichts zu löschen",
+        "messagesDeleteFailed": "Nachrichten konnten nicht gelöscht werden"
+    },
+    "Messages": {
+        "title": "Nachrichten",
+        "unread": "{count} ungelesen",
+        "tabs": {
+            "inbox": "Posteingang",
+            "sent": "Gesendet"
+        },
+        "inbox": {
+            "description": "{count} Nachrichten",
+            "fallback": "Eingehende Nachrichten",
+            "empty": "Noch keine Nachrichten."
+        },
+        "sent": {
+            "description": "{count} Nachrichten",
+            "fallback": "Gesendete Nachrichten",
+            "empty": "Noch keine gesendeten Nachrichten."
+        },
+        "markAllRead": "Alle als gelesen markieren",
+        "deleteAllRead": "Alle gelesenen löschen",
+        "deleteAll": "Alle löschen",
+        "page": "Seite {page} von {total}",
+        "from": "Von",
+        "to": "An",
+        "loading": "Lädt…",
+        "delete": "Löschen",
+        "status": {
+            "deleted": "Gelöscht",
+            "read": "Gelesen",
+            "unread": "Ungelesen"
+        },
+        "confirm": {
+            "messageTitle": "Nachricht löschen?",
+            "messageDescription": "Dadurch wird die Nachricht aus Ihrer Ansicht entfernt. Dies kann nicht rückgängig gemacht werden.",
+            "readTitle": "Alle gelesenen Nachrichten löschen?",
+            "readDescription": "Dadurch werden alle gelesenen Nachrichten aus Ihrem Posteingang entfernt. Dies kann nicht rückgängig gemacht werden.",
+            "sentTitle": "Alle gesendeten Nachrichten löschen?",
+            "sentDescription": "Dadurch werden alle Nachrichten aus Ihrem Ordner „Gesendet“ entfernt. Dies kann nicht rückgängig gemacht werden."
+        },
+        "compose": {
+            "button": "Neue Nachricht",
+            "title": "Neue Nachricht",
+            "description": "Senden Sie eine Direktnachricht an einen anderen Spieler.",
+            "recipient": "Empfänger",
+            "subject": "Betreff",
+            "message": "Nachricht",
+            "send": "Senden",
+            "searchPlaceholder": "Nach Name oder Unternehmen suchen…",
+            "searching": "Suche…",
+            "noPlayerFound": "Kein Spieler gefunden.",
+            "clearRecipient": "Empfänger entfernen"
+        }
+    },
+    "Common": {
+        "waitingForData": "Warten auf Simulationsdaten…",
+        "loading": "Lädt…",
+        "loadingLabel": "Wird geladen",
+        "duration": "Dauer",
+        "close": "Schließen",
+        "more": "Mehr",
+        "breadcrumb": "Brotkrümelnavigation",
+        "backToTop": "Nach oben",
+        "toggleSidebar": "Seitenleiste umschalten",
+        "sidebar": "Seitenleiste",
+        "sidebarDescription": "Zeigt die mobile Seitenleiste an.",
+        "deposits": "Guthaben",
+        "previous": "Zurück",
+        "next": "Weiter",
+        "all": "Alle",
+        "save": "Speichern",
+        "cancel": "Abbrechen",
+        "reset": "Zurücksetzen",
+        "set": "Setzen",
+        "saving": "Speichert…",
+        "setting": "Wird gesetzt…",
+        "confirm": "Bestätigen",
+        "empty": "Leer",
+        "dispatch": "Entsenden",
+        "build": "Bauen",
+        "underConstruction": "Im Bau",
+        "scale": "Größe",
+        "sell": "Verkaufen",
+        "buy": "Kaufen",
+        "accept": "Annehmen",
+        "buildAtScale": "In voller Größe bauen",
+        "retry": "Erneut versuchen",
+        "simulationOffline": "Simulationsdaten nicht verfügbar — {count, plural, one {# Abfrage} other {# Abfragen}} haben das Abrufen eingestellt.",
+        "resetToNoExperience": "Auf keine Erfahrung zurücksetzen",
+        "setLevel": "Stufe auf {level} setzen",
+        "userAvatarAlt": "Benutzeravatar",
+        "errorTitle": "Laden fehlgeschlagen",
+        "errorDescription": "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut.",
+        "selectResource": "Ressource auswählen…",
+        "logoCategories": {
+            "raw": "Rohstoffe",
+            "refinement": "Veredelung",
+            "manufacturing": "Fertigung",
+            "services": "Dienstleistungen",
+            "general": "Allgemein"
+        }
+    },
+    "Charts": {
+        "year": "Jahr {year}",
+        "decade": "{decade}er",
+        "previousDecember": "Vorheriger Dezember",
+        "monthly": "Monat",
+        "yearly": "Jahr",
+        "decadeShort": "Jahrzehnt",
+        "lastYear": "Letztes Jahr:",
+        "netBalance": "Netto-Saldo",
+        "monthlyNetIncome": "Monatlicher Nettogewinn",
+        "productionValue": "Produktionswert",
+        "consumptionValue": "Verbrauchswert",
+        "wages": "Löhne",
+        "totalWorkers": "Personal gesamt",
+        "endOfMonth": "Ende {month} {year}",
+        "yearLabel": "Jahr {year}",
+        "yearShort": "J{year}"
+    },
+    "Guards": {
+        "unsavedChanges": "Sie haben ungespeicherte Änderungen.",
+        "leaveAnyway": "Trotzdem verlassen",
+        "tourActive": "Die geführte Tour ist aktiv. Beim Verlassen wird das Tutorial beendet.",
+        "endTourAndLeave": "Tutorial beenden & verlassen"
+    },
+    "Tour": {
+        "back": "Zurück",
+        "close": "Schließen",
+        "finish": "Fertig",
+        "next": "Weiter",
+        "open": "Dialog öffnen",
+        "skip": "Tour überspringen",
+        "of": "von"
+    },
+    "Imprint": {
+        "intro": "Dies ist das Impressum für Yawa.",
+        "responsible": "Verantwortlich für den Inhalt:",
+        "email": "E-Mail:",
+        "placeholder": "Dies ist ein Platzhalter. Bitte aktualisieren Sie ihn mit Ihren tatsächlichen rechtlichen Angaben, wie es das Gesetz verlangt.",
+        "assets": "Assets erstellt mit gemini.",
+        "backToHome": "Zurück zur Startseite",
+        "responsibleName": "Tobias",
+        "responsibleEmail": "info@yawa.local"
+    },
+    "Account": {
+        "title": "Kontoverwaltung",
+        "uploadAvatar": "Profilbild hochladen",
+        "profilePicture": "Profilbild",
+        "profilePictureDescription": "Laden Sie ein Profilbild hoch, um Ihr Konto zu personalisieren",
+        "dropHere": "Bild hier ablegen oder",
+        "browse": "durchsuchen",
+        "pngOnly": "Nur PNG (max. 1 MB)",
+        "uploadPhoto": "Foto hochladen",
+        "uploading": "Lädt hoch…",
+        "changePhoto": "Foto ändern",
+        "removing": "Wird entfernt…",
+        "remove": "Entfernen",
+        "avatarUploaded": "Profilbild erfolgreich hochgeladen",
+        "avatarRemoved": "Profilbild erfolgreich entfernt",
+        "restartTour": "Tutorial neu starten"
+    }
+}
