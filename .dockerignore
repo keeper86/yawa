@@ -3,7 +3,7 @@ node_modules
 
 # Exclude environment files
 
-.env\*
+.env*
 
 # Exclude certificates and private keys
 
@@ -26,8 +26,8 @@ playwright.config.*
 
 # Exclude misc editor/project files
 
-_.log
-_.md
-\*.tsbuildinfo
+*.log
+*.md
+*.tsbuildinfo
 
 plantuml*.jar
