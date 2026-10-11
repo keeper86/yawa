@@ -8,6 +8,7 @@ export const DOMAIN_ERROR_CODES = [
     'recipientNotFound',
     'cannotMessageSelf',
     'messageRateLimited',
+    'patRateLimited',
     'invalidAvatarData',
     'avatarPngOnly',
 ] as const;
@@ -28,6 +29,7 @@ const CODE_BY_MESSAGE: Record<string, DomainErrorCode> = {
     'Recipient not found': 'recipientNotFound',
     'Cannot send a message to yourself': 'cannotMessageSelf',
     'Too many messages sent. Please wait a moment before trying again.': 'messageRateLimited',
+    'Too many requests from this PAT, please try again later': 'patRateLimited',
     'Invalid base64 image data': 'invalidAvatarData',
     'Only PNG images are supported for avatar': 'avatarPngOnly',
 };

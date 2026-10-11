@@ -1,4 +1,4 @@
-import { getCaller, getUnauthenticatedCaller, testUsers } from 'tests/vitest/setupTestcontainer';
+import { getCaller, getPatCaller, getUnauthenticatedCaller, testUsers } from 'tests/vitest/setupTestcontainer';
 import { describe, expect, it } from 'vitest';
 
 describe('user endpoint (integration)', () => {
@@ -48,6 +48,12 @@ describe('user endpoint (integration)', () => {
 
     it('getUserIdFromSession returns the caller id', async () => {
         const caller = getCaller(testUsers.testUser.user_id);
+
+        await expect(caller.getUserIdFromSession()).resolves.toEqual({ userId: testUsers.testUser.user_id });
+    });
+
+    it('getUserIdFromSession is accessible with a PAT session', async () => {
+        const caller = getPatCaller(testUsers.testUser.user_id);
 
         await expect(caller.getUserIdFromSession()).resolves.toEqual({ userId: testUsers.testUser.user_id });
     });

@@ -7,6 +7,7 @@
         "recipientNotFound": "Recipient not found",
         "cannotMessageSelf": "Cannot send a message to yourself",
         "messageRateLimited": "Too many messages sent. Please wait a moment before trying again.",
+        "patRateLimited": "Too many requests from this personal access token. Please try again later.",
         "invalidAvatarData": "Invalid base64 image data",
         "avatarPngOnly": "Only PNG images are supported for avatar",
         "avatarPngFile": "Please upload a PNG image file",
@@ -32,6 +33,7 @@
         "Account": "Account",
         "Messages": "Messages",
         "Imprint": "Imprint",
+        "pat": "PAT Management",
         "logoAlt": "Yawa logo",
         "brand": "Yawa"
     },
@@ -70,7 +72,8 @@
         "messageDeleteFailed": "Failed to delete message",
         "messagesDeleted": "{count} messages deleted",
         "nothingToDelete": "Nothing to delete",
-        "messagesDeleteFailed": "Failed to delete messages"
+        "messagesDeleteFailed": "Failed to delete messages",
+        "patTokenCopied": "Token copied to clipboard"
     },
     "Messages": {
         "title": "Messages",
@@ -230,6 +233,36 @@
         "remove": "Remove",
         "avatarUploaded": "Avatar uploaded successfully",
         "avatarRemoved": "Avatar removed successfully",
-        "restartTour": "Restart tutorial"
+        "restartTour": "Restart tutorial",
+        "pat": {
+            "manage": "PAT Management",
+            "title": "Personal Access Tokens",
+            "nameLabel": "Token name (optional)",
+            "expiry": {
+                "minute": "1 minute",
+                "day": "1 day",
+                "week": "1 week",
+                "month": "1 month",
+                "year": "1 year"
+            },
+            "generate": "Generate token",
+            "generating": "Generating…",
+            "dialogTitle": "Personal Access Token",
+            "dialogDescription": "Copy this token now — it will not be shown again.",
+            "tokenLabel": "Generated personal access token",
+            "copy": "Copy",
+            "existingTitle": "Existing tokens",
+            "empty": "No tokens yet.",
+            "unnamed": "Unnamed token",
+            "expired": "Expired",
+            "created": "Created {date}",
+            "expires": "Expires {date}",
+            "revoke": "Revoke",
+            "delete": "Delete",
+            "alreadyRevoked": "Already revoked",
+            "revokeTitle": "Revoke token",
+            "revokeConfirm": "Revoke this personal access token? It will be immediately invalidated but remain listed.",
+            "deleteConfirm": "Delete this personal access token? This cannot be undone."
+        }
     }
 }

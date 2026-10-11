@@ -3,6 +3,9 @@ import { AvatarUploadDialog } from '@/app/account/AvatarUploadDialog';
 import { Page } from '@/components/client/Page';
 import { useTour } from '@/components/tour/TourContext';
 import { Button } from '@/components/ui/button';
+import { APP_ROUTES } from '@/lib/appRoutes';
+import { KeyRound } from 'lucide-react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useSession } from 'next-auth/react';
 
@@ -20,6 +23,13 @@ export default function AccountPage() {
         <Page title={t('title')}>
             <div className='w-full max-w-md space-y-4 flex flex-col flex-gap-2'>
                 <AvatarUploadDialog />
+
+                <Button asChild variant='outline' className='w-full justify-start'>
+                    <Link href={APP_ROUTES.account.pat.path}>
+                        <KeyRound />
+                        {t('pat.manage')}
+                    </Link>
+                </Button>
 
                 <Button
                     type='button'

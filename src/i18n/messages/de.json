@@ -7,6 +7,7 @@
         "recipientNotFound": "Empfänger nicht gefunden",
         "cannotMessageSelf": "Sie können sich nicht selbst eine Nachricht senden",
         "messageRateLimited": "Zu viele Nachrichten gesendet. Bitte warten Sie einen Moment und versuchen Sie es erneut.",
+        "patRateLimited": "Zu viele Anfragen von diesem persönlichen Zugangstoken. Bitte versuchen Sie es später erneut.",
         "invalidAvatarData": "Ungültige Base64-Bilddaten",
         "avatarPngOnly": "Für das Profilbild werden nur PNG-Bilder unterstützt",
         "avatarPngFile": "Bitte laden Sie eine PNG-Bilddatei hoch",
@@ -32,6 +33,7 @@
         "Account": "Konto",
         "Messages": "Nachrichten",
         "Imprint": "Impressum",
+        "pat": "PAT-Verwaltung",
         "logoAlt": "Yawa-Logo",
         "brand": "Yawa"
     },
@@ -70,7 +72,8 @@
         "messageDeleteFailed": "Nachricht konnte nicht gelöscht werden",
         "messagesDeleted": "{count} Nachrichten gelöscht",
         "nothingToDelete": "Nichts zu löschen",
-        "messagesDeleteFailed": "Nachrichten konnten nicht gelöscht werden"
+        "messagesDeleteFailed": "Nachrichten konnten nicht gelöscht werden",
+        "patTokenCopied": "Token in die Zwischenablage kopiert"
     },
     "Messages": {
         "title": "Nachrichten",
@@ -230,6 +233,36 @@
         "remove": "Entfernen",
         "avatarUploaded": "Profilbild erfolgreich hochgeladen",
         "avatarRemoved": "Profilbild erfolgreich entfernt",
-        "restartTour": "Tutorial neu starten"
+        "restartTour": "Tutorial neu starten",
+        "pat": {
+            "manage": "PAT-Verwaltung",
+            "title": "Persönliche Zugangstoken",
+            "nameLabel": "Token-Name (optional)",
+            "expiry": {
+                "minute": "1 Minute",
+                "day": "1 Tag",
+                "week": "1 Woche",
+                "month": "1 Monat",
+                "year": "1 Jahr"
+            },
+            "generate": "Token erzeugen",
+            "generating": "Wird erzeugt…",
+            "dialogTitle": "Persönlicher Zugangstoken",
+            "dialogDescription": "Kopieren Sie diesen Token jetzt — er wird nicht erneut angezeigt.",
+            "tokenLabel": "Erzeugter persönlicher Zugangstoken",
+            "copy": "Kopieren",
+            "existingTitle": "Vorhandene Token",
+            "empty": "Noch keine Token vorhanden.",
+            "unnamed": "Unbenannter Token",
+            "expired": "Abgelaufen",
+            "created": "Erstellt {date}",
+            "expires": "Läuft ab {date}",
+            "revoke": "Widerrufen",
+            "delete": "Löschen",
+            "alreadyRevoked": "Bereits widerrufen",
+            "revokeTitle": "Token widerrufen",
+            "revokeConfirm": "Diesen persönlichen Zugangstoken widerrufen? Er wird sofort ungültig, bleibt aber weiterhin sichtbar.",
+            "deleteConfirm": "Diesen persönlichen Zugangstoken löschen? Dies kann nicht rückgängig gemacht werden."
+        }
     }
 }
