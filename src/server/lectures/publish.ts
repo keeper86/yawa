@@ -1,6 +1,7 @@
 import { briefSchema, validateBriefScope } from '@/lib/lectureBrief';
 import type { Lectures, Tables } from '@/types/db_schemas';
 import type { Knex } from 'knex';
+import { DomainFailure } from '../domainError';
 
 export type PublishLectureInput = {
     lectureId: string;
@@ -17,17 +18,25 @@ export const publishLecture = async (db: Knex<Tables>, input: PublishLectureInpu
     return db.transaction(async (trx) => {
         const lecture = await trx('lectures').where({ id: input.lectureId }).forUpdate().first();
         if (!lecture) {
-            throw new Error(`Lecture ${input.lectureId} not found`);
+            throw new DomainFailure('lectureNotFound', `Lecture ${input.lectureId} not found`);
         }
         if (lecture.owner_user_id !== input.userId) {
-            throw new Error('Only the owner can publish a lecture');
+            throw new DomainFailure('notOwner', 'Only the owner can publish a lecture');
         }
         if (lecture.published_at !== null) {
             return lecture;
         }
 
-        const brief = briefSchema.parse(lecture.brief);
-        validateBriefScope(brief, await scopeSlugs(trx, input.lectureId));
+        const parsed = briefSchema.safeParse(lecture.brief);
+        if (!parsed.success) {
+            const fields = parsed.error.issues.map((issue) => issue.path.join('.')).join(', ');
+            throw new DomainFailure('invalidBrief', `Brief is invalid: ${fields}`);
+        }
+        try {
+            validateBriefScope(parsed.data, await scopeSlugs(trx, input.lectureId));
+        } catch (error) {
+            throw new DomainFailure('invalidBrief', (error as Error).message);
+        }
 
         const acts = await trx('lecture_acts')
             .join('acts', 'acts.id', 'lecture_acts.act_id')
@@ -36,7 +45,7 @@ export const publishLecture = async (db: Knex<Tables>, input: PublishLectureInpu
             .select('acts.*', 'concepts.slug as concept_slug');
 
         if (acts.length === 0) {
-            throw new Error('Lecture has no acts');
+            throw new DomainFailure('lectureNotPublishable', 'Lecture has no acts');
         }
 
         const actIds = acts.map((act) => act.id);
@@ -45,15 +54,19 @@ export const publishLecture = async (db: Knex<Tables>, input: PublishLectureInpu
             (act) => act.status !== 'accepted' || (act.origin === 'generated' && !grounded.has(act.id)),
         );
         if (blocking.length > 0) {
-            throw new Error(
+            throw new DomainFailure(
+                'lectureNotPublishable',
                 `Lecture not publishable: ${blocking.length} act(s) are proposed, rejected or missing grounding`,
             );
         }
 
         const covered = new Set(acts.map((act) => act.concept_slug));
-        const uncovered = brief.mustCover.filter((slug) => !covered.has(slug));
+        const uncovered = parsed.data.mustCover.filter((slug) => !covered.has(slug));
         if (uncovered.length > 0) {
-            throw new Error(`Lecture not publishable: no act covers ${uncovered.join(', ')}`);
+            throw new DomainFailure(
+                'lectureNotPublishable',
+                `Lecture not publishable: no act covers ${uncovered.join(', ')}`,
+            );
         }
 
         const now = new Date();

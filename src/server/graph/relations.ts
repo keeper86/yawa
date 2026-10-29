@@ -1,6 +1,7 @@
 import type { ConceptRelations, Tables } from '@/types/db_schemas';
 import type { RelationStatus, RelationType } from '@/types/enums';
 import type { Knex } from 'knex';
+import { DomainFailure } from '../domainError';
 
 export type RelationCandidate = {
     sourceConceptId: string;
@@ -48,7 +49,7 @@ export const linkConcepts = async (
 ): Promise<{ relation: ConceptRelations; created: boolean }> => {
     const [sourceConceptId, targetConceptId] = canonicalOrder(candidate);
     if (sourceConceptId === targetConceptId) {
-        throw new Error('A concept cannot be related to itself');
+        throw new DomainFailure('relationCycle', 'A concept cannot be related to itself');
     }
 
     return db.transaction(async (trx) => {
@@ -58,7 +59,7 @@ export const linkConcepts = async (
             .forUpdate()
             .select('id');
         if (locked.length !== 2) {
-            throw new Error('Both concepts must exist before they can be related');
+            throw new DomainFailure('conceptNotFound', 'Both concepts must exist before they can be related');
         }
 
         const existing = await trx('concept_relations')
@@ -73,7 +74,10 @@ export const linkConcepts = async (
         }
 
         if (candidate.type === 'requires' && (await createsRequiresCycle(trx, sourceConceptId, targetConceptId))) {
-            throw new Error(`Relation ${sourceConceptId} -> ${targetConceptId} would create a requires cycle`);
+            throw new DomainFailure(
+                'relationCycle',
+                `Relation ${sourceConceptId} -> ${targetConceptId} would create a requires cycle`,
+            );
         }
 
         const [relation] = await trx('concept_relations')

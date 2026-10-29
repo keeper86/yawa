@@ -65,11 +65,16 @@ Mutating procedures return the updated row, not a boolean, so the review UI can 
 
 ## Domain errors
 
-Add to `DOMAIN_ERROR_CODES`, `CODE_BY_MESSAGE`, `en.json` and `de.json`:
+The mechanism, decided while executing: services throw `DomainFailure(code, message, params)` from `src/server/domainError.ts`. One middleware in `trpcRoot` converts it into a `TRPCError` with the domain packet, so no procedure needs a `try`/`catch` and no message string is ever pattern-matched to guess a code. `CODE_BY_MESSAGE` stays only for the handful of legacy messages that predate this.
 
-`conceptNotFound`, `actNotFound`, `lectureNotFound`, `sourceNotFound`, `notOwner`, `lectureNotPublishable`, `relationCycle`, `relationExists`, `invalidBrief`, `actNotReviewable`, `publicationRefused`, `sourceInUse`.
+Codes added to `DOMAIN_ERROR_CODES`, `en.json` and `de.json`: `conceptNotFound`, `sourceNotFound`, `actNotFound`, `lectureNotFound`, `notOwner`, `relationCycle`, `invalidBrief`, `lectureNotPublishable`, `sourceInUse`, `publicationRefused`.
 
-`src/i18n/messages.test.ts` fails if any of them lacks a translation; `src/i18n/domainError.test.ts` should gain a case per new code so `CODE_BY_MESSAGE` cannot rot.
+Two planned codes were dropped:
+
+- **`relationExists`** — linking an existing edge is idempotent and returns `created: false` (chunk 06). A code for a non-error would be dead weight.
+- **`actNotReviewable`** — a published act already answers with `publicationRefused`, and an accepted act re-reviewed as accepted is a no-op. One code, one meaning.
+
+`src/i18n/messages.test.ts` fails if a code lacks a translation.
 
 ## Behaviour that is easy to get wrong
 
@@ -81,12 +86,32 @@ Add to `DOMAIN_ERROR_CODES`, `CODE_BY_MESSAGE`, `en.json` and `de.json`:
 
 ## Acceptance
 
-- [ ] Every procedure has an explicit `.output()` and is covered by at least one happy-path and one authorization test.
-- [ ] A non-owner cannot review, publish or reorder; each returns `notOwner`.
-- [ ] `concept.link` refuses a cycle and a duplicate with distinct codes.
-- [ ] `lecture.publish` with one proposed act fails and leaves `published_at` null on lecture and acts.
-- [ ] Deleting a source that grounds an act fails with `sourceInUse`.
-- [ ] `npm run test:all` green, including the message catalogue checks.
+- [x] Every procedure has an explicit `.output()` and is covered by at least one happy-path and one authorization test.
+- [x] A non-owner cannot review, publish or reorder; each returns `notOwner`.
+- [x] `concept.link` refuses a cycle with `relationCycle`; a duplicate link is idempotent and reports `created: false`.
+- [x] `lecture.publish` with one proposed act fails and leaves `published_at` null on lecture and acts.
+- [x] Deleting a source that grounds an act fails with `sourceInUse`.
+- [x] `npm run test:all` green, including the message catalogue checks.
+
+## State after execution
+
+Files: `src/server/access.ts`, `src/server/controller/{concept,source,act,lecture}.ts`, `src/server/controller/content.test.ts` (11 integration tests), `src/lib/sourceText.ts` + 7 unit tests, router wiring, ten domain codes with English and German strings.
+
+18 procedures are live: `concept.{resolve,search,get,link,unlink}`, `source.{addText,list,remove}`, `act.{list,get,review,publish}`, `lecture.{create,list,get,updateBrief,setScope,setActs,publish}`.
+
+Deviations from the plan, all narrowing:
+
+- **`act.review` instead of `acceptAct`/`rejectAct`** — one procedure with a decision enum, as the decision gate suggested. Re-reviewing an accepted act as accepted returns it unchanged instead of throwing, so a flaky refetch does not surface an error.
+- **`concept.unlink` records `rejected`, never deletes.** A tombstone stops the creation agent proposing the same edge again.
+- **`lecture.setActs` validates ownership of every act** before touching the table, so a partially applied order is impossible.
+- **`source.addText` is idempotent per text.** The same text in the same lecture reuses the source and does not duplicate sections; the external id is `paste:<sha256>`.
+
+Not done, deliberately: no `domainError.test.ts` case per code. The existing test guards `CODE_BY_MESSAGE`; the new codes reach the wire through `DomainFailure`, and the integration test asserts the codes themselves, which is the stronger check.
+
+Two traps hit while building this, both worth remembering:
+
+1. **A `DomainFailure` thrown inside a resolver is not a `TRPCError`.** The error formatter shapes HTTP responses, so it cannot fix what a direct caller sees; the fix belongs in a middleware. That is why `procedure` now wraps `trpcRoot.procedure`.
+2. **Five test failures came from my own fixture**, not the code: `insertAct` created a concept of its own, so a lecture whose `mustCover` named a different concept was correctly refused. The gate was right both times this happened today.
 
 ## Anti-goals
 

@@ -11,7 +11,17 @@
         "invalidAvatarData": "Invalid base64 image data",
         "avatarPngOnly": "Only PNG images are supported for avatar",
         "avatarPngFile": "Please upload a PNG image file",
-        "avatarFileTooLarge": "File size must be less than 1MB"
+        "avatarFileTooLarge": "File size must be less than 1MB",
+        "conceptNotFound": "Concept not found",
+        "sourceNotFound": "Source not found",
+        "actNotFound": "Act not found",
+        "lectureNotFound": "Lecture not found",
+        "notOwner": "Only the owner can change this",
+        "relationCycle": "This prerequisite would create a cycle",
+        "invalidBrief": "The brief is incomplete or invalid",
+        "lectureNotPublishable": "This lecture cannot be published yet",
+        "sourceInUse": "This source is used as grounding by at least one act",
+        "publicationRefused": "Published acts cannot be changed"
     },
     "Units": {
         "day": "day",

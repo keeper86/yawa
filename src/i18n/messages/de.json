@@ -11,7 +11,17 @@
         "invalidAvatarData": "Ungültige Base64-Bilddaten",
         "avatarPngOnly": "Für das Profilbild werden nur PNG-Bilder unterstützt",
         "avatarPngFile": "Bitte laden Sie eine PNG-Bilddatei hoch",
-        "avatarFileTooLarge": "Die Dateigröße muss unter 1 MB liegen"
+        "avatarFileTooLarge": "Die Dateigröße muss unter 1 MB liegen",
+        "conceptNotFound": "Konzept nicht gefunden",
+        "sourceNotFound": "Quelle nicht gefunden",
+        "actNotFound": "Akt nicht gefunden",
+        "lectureNotFound": "Vorlesung nicht gefunden",
+        "notOwner": "Nur der Eigentümer kann das ändern",
+        "relationCycle": "Diese Voraussetzung würde einen Zyklus erzeugen",
+        "invalidBrief": "Das Briefing ist unvollständig oder ungültig",
+        "lectureNotPublishable": "Diese Vorlesung kann noch nicht veröffentlicht werden",
+        "sourceInUse": "Diese Quelle wird von mindestens einem Akt als Grundlage verwendet",
+        "publicationRefused": "Veröffentlichte Akte können nicht geändert werden"
     },
     "Units": {
         "day": "Tag",
