@@ -21,6 +21,25 @@ export const briefSchema = z.object({
 
 export type LectureBrief = z.infer<typeof briefSchema>;
 
+export const toneInstruction = (language: LectureBrief['language'], tone: LectureBrief['tone']): string => {
+    if (language === 'de') {
+        if (tone === 'formal') {
+            return 'Sprich die lernende Person mit "Sie" an und verwende vollständige Sätze.';
+        }
+        if (tone === 'conversational') {
+            return 'Sprich die lernende Person mit "du" an, kurz und direkt.';
+        }
+        return 'Vermeide "du" und "Sie"; formuliere unpersönlich, zum Beispiel "Man bestimmt zunächst ...".';
+    }
+    if (tone === 'formal') {
+        return 'Address the learner politely and formally, in complete sentences without contractions.';
+    }
+    if (tone === 'conversational') {
+        return 'Address the learner directly in short, spoken sentences.';
+    }
+    return 'Use impersonal formulations, for example "one first determines ...", and avoid addressing the learner.';
+};
+
 export const validateBriefScope = (brief: LectureBrief, scopeSlugs: readonly string[]): void => {
     const scope = new Set(scopeSlugs);
     const referenced = [...brief.objectives.map((objective) => objective.concept), ...brief.mustCover];

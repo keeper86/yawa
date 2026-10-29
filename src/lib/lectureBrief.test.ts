@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { briefSchema, type LectureBrief, validateBriefScope } from './lectureBrief';
+import { briefSchema, type LectureBrief, toneInstruction, validateBriefScope } from './lectureBrief';
 
 const brief: LectureBrief = {
     audience: 'B.Sc. Physik, 3. Semester',
@@ -60,5 +60,27 @@ describe('validateBriefScope', () => {
         expect(() => validateBriefScope(duplicated, scope)).toThrow(
             /^Brief references concepts outside the lecture scope: kettenregel$/,
         );
+    });
+});
+
+describe('toneInstruction', () => {
+    it('asks for the formal address in german', () => {
+        expect(toneInstruction('de', 'formal')).toContain('"Sie"');
+    });
+
+    it('asks for the informal address in german', () => {
+        expect(toneInstruction('de', 'conversational')).toContain('"du"');
+    });
+
+    it('asks for impersonal wording when the tone is neutral', () => {
+        const instruction = toneInstruction('de', 'neutral');
+        expect(instruction).toContain('unpersönlich');
+        expect(instruction).not.toContain('mit "du" an');
+    });
+
+    it('gives an instruction for every english tone', () => {
+        for (const tone of ['formal', 'neutral', 'conversational'] as const) {
+            expect(toneInstruction('en', tone).length).toBeGreaterThan(20);
+        }
     });
 });

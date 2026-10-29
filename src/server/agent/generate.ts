@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { actContentHash, actText } from '@/lib/actScript';
+import { toneInstruction } from '@/lib/lectureBrief';
 import { getTemplateDefinition, type Script } from '../templates';
 import { DomainFailure } from '../domainError';
 import type { AiProvider, ChatMessage } from '../ai';
@@ -57,6 +58,8 @@ const buildMessages = (
                     ? `Objective: the learner should be able to ${objective.verb} the concept: ${objective.depth}`
                     : `Audience: ${context.brief.audience}`,
                 `Tone: ${context.brief.tone}. Audience: ${context.brief.audience}.`,
+                toneInstruction(context.brief.language, context.brief.tone),
+                'Keep that register in every step; a single informal sentence breaks it.',
                 `Passages:\n${passages.map((passage) => `### ${passage.sourceTitle} / ${passage.heading}\n${passage.content}`).join('\n\n')}`,
                 exemplars.length > 0
                     ? `Accepted acts of the same template, for style only — do not copy their content:\n${exemplars.map(renderExemplar).join('\n\n')}`
