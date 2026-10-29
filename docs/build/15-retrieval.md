@@ -92,12 +92,26 @@ If that test is weakened to make ranking easier, the product's claim disappears.
 
 ## Acceptance
 
-- [ ] RRF fusion unit-tested with two synthetic ranked lists.
-- [ ] Ranking components unit-tested individually; `qualityShrinkage` is monotone and bounded.
-- [ ] The zero-overlap test above passes.
-- [ ] Drafts of other users are never returned; the viewer's own drafts are.
-- [ ] Acts without embeddings are excluded and counted in the snapshot, not silently dropped.
-- [ ] The whole retrieval runs in three queries plus one embedding call.
+- [x] RRF fusion unit-tested with two synthetic ranked lists.
+- [x] Ranking components unit-tested individually; `qualityShrinkage` is monotone and bounded.
+- [x] The zero-overlap test above passes.
+- [x] Drafts of other users are never returned; the viewer's own drafts are.
+- [x] Acts without embeddings are excluded and counted in the snapshot, not silently dropped.
+- [x] The whole retrieval runs in three queries plus one embedding call — four with the count of unembedded acts.
+
+## State after execution
+
+Files: `src/server/retrieval/{rank,seed,expand,index}.ts` and `retrieval.test.ts` (7 tests).
+
+Two things changed because the test forced them:
+
+**Retrieval no longer truncates.** The first version sliced the top 10 inside `retrieve`. The zero-overlap test then failed for an honest reason: with 22 acts containing the query words, a prerequisite act does not belong in the top 10, and truncating there made "found via graph" unassertable. `retrieve` now returns every scored candidate and `topCandidates(candidates, limit)` is what a caller uses for a screen. The candidate set is bounded by construction — 20 vector + 20 lexical seeds plus the acts of the closure — so it cannot grow with the corpus.
+
+**The fixture needed a corpus.** With two acts in the table, `ORDER BY embedding <=> $1 LIMIT 20` returns both, so nothing is ever graph-_only_ and the test proved nothing. It now seeds 22 acts that do contain the query words, which saturates both seed lists; the interpolation act is then genuinely reachable only through `requires`, and the test asserts it appears with `hop: 1`, `via: 'graph'`, listed in `snapshot.graphOnlySeeds`.
+
+`GRAPH_SEED` gives graph-only candidates a seed equal to a reciprocal-rank-fusion position of 10. Without it, any act found only through the graph scores zero and loses to everything. With a _too generous_ seed the graph would drown out lexical relevance. The value is a judgement call, not a measured one — chunk 17 is where it gets tuned against the corpus.
+
+Known limitation, deliberately left in: `predict-observe-explain` is never chosen by the ranker. The deterministic map has no signal for "an intuition is likely wrong and the consequence is observable", and inventing one would mean guessing. That template reaches a learner only when the _creation_ plan chose it, not through tutor selection.
 
 ## Anti-goals
 
