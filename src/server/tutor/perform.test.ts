@@ -69,6 +69,7 @@ const lesson = {
             kind: 'choice',
             idea: 'Der Fehler der Trapezregel haengt ueber eine feste Potenz von h ab.',
             question: 'Was passiert mit C·h^2, wenn du h halbierst?',
+            figure: null,
             options: [
                 { text: 'Er halbiert sich.', correct: false, why: 'Verwechselt h mit h^2.' },
                 { text: 'Er viertelt sich.', correct: true, why: '' },
@@ -79,6 +80,7 @@ const lesson = {
             kind: 'choice',
             idea: 'Die Ordnung ist die Hochzahl im fuehrenden Fehlerterm.',
             question: 'Welche Ordnung hat D·h^4?',
+            figure: null,
             options: [
                 { text: 'Ordnung 2.', correct: false, why: 'Liest die Zahl der Stuetzstellen statt der Hochzahl.' },
                 { text: 'Ordnung 4.', correct: true, why: '' },
@@ -121,6 +123,7 @@ describe('planLesson', () => {
                     kind: 'choice',
                     idea: 'Zwei richtige Optionen sind kein Check.',
                     question: 'Was ist 1 + 1?',
+                    figure: null,
                     options: [
                         { text: '2', correct: true, why: '' },
                         { text: 'Zwei', correct: true, why: '' },
@@ -146,6 +149,7 @@ describe('planLesson', () => {
                     kind: 'choice',
                     idea: 'Ohne Begruendung weiss der Tutor nicht, was schiefging.',
                     question: 'Was ist 1 + 1?',
+                    figure: null,
                     options: [
                         { text: '2', correct: true, why: '' },
                         { text: '3', correct: false, why: '' },
@@ -205,5 +209,84 @@ describe('repairBead', () => {
         });
 
         expect(text).toBe('Verwechselt h mit h^2.');
+    });
+});
+
+describe('planLesson figures', () => {
+    const figure = {
+        kind: 'line',
+        xLabel: 'Schrittweite h',
+        yLabel: 'Fehler',
+        caption: 'Halbieren von h viertelt den Fehler.',
+        series: [
+            {
+                label: 'Trapez',
+                points: [
+                    { x: 0.4, y: 0.08 },
+                    { x: 0.2, y: 0.02 },
+                    { x: 0.1, y: 0.005 },
+                ],
+            },
+        ],
+    };
+
+    it('keeps a figure the model attached to a bead', async () => {
+        const input = await prepare();
+        const withFigure = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Vergleiche die Fehler bei halbierter Schrittweite.',
+                    question: 'Was zeigen die beiden Punkte?',
+                    figure,
+                    options: [
+                        { text: 'Der Fehler viertelt sich.', correct: true, why: '' },
+                        { text: 'Der Fehler halbiert sich.', correct: false, why: 'Verwechselt h mit h^2.' },
+                        { text: 'Der Fehler bleibt gleich.', correct: false, why: 'Ignoriert die Zahlen.' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => withFigure });
+
+        const planned = await planLesson(ai, { ...input, diagnosis });
+
+        expect(planned.beads[0].figure).toEqual(figure);
+    });
+
+    it('drops a figure with a repeated x value but keeps the bead', async () => {
+        const input = await prepare();
+        const broken = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Zwei Punkte auf demselben x sind keine Kurve.',
+                    question: 'Was zeigen die beiden Punkte?',
+                    figure: {
+                        ...figure,
+                        series: [
+                            {
+                                label: 'Trapez',
+                                points: [
+                                    { x: 0.2, y: 0.02 },
+                                    { x: 0.2, y: 0.01 },
+                                ],
+                            },
+                        ],
+                    },
+                    options: [
+                        { text: 'Der Fehler viertelt sich.', correct: true, why: '' },
+                        { text: 'Der Fehler halbiert sich.', correct: false, why: 'Verwechselt h mit h^2.' },
+                        { text: 'Der Fehler bleibt gleich.', correct: false, why: 'Ignoriert die Zahlen.' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => broken });
+
+        const planned = await planLesson(ai, { ...input, diagnosis });
+
+        expect(planned.beads).toHaveLength(1);
+        expect(planned.beads[0].figure).toBeNull();
     });
 });

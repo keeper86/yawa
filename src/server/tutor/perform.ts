@@ -1,4 +1,12 @@
-import { type Bead, fallbackLesson, fallbackRepair, type Lesson, lessonSchema, repairSchema } from '@/lib/lesson';
+import {
+    type Bead,
+    fallbackLesson,
+    fallbackRepair,
+    type Figure,
+    type Lesson,
+    lessonSchema,
+    repairSchema,
+} from '@/lib/lesson';
 import type { AiProvider, ChatMessage } from '../ai';
 import type { Script } from '../templates';
 import type { Diagnosis } from '../retrieval/rank';
@@ -60,10 +68,14 @@ const planMessages = (input: PlanInput): ChatMessage[] => [
             'Every option is a mistake a real learner makes. why names that mistake in one short clause. No joke options, no "all of the above", no options that differ only in wording.',
             `Write in this language: ${input.concept.language}.`,
             'The act notes are written for you, not for the learner. Rewrite them, never quote them.',
+            'A bead may carry a figure when the argument lives in the numbers: two series to compare, a trend, or how one parameter changes the outcome.',
+            'Otherwise set figure to null. Never add a figure for decoration, never for a single value, and never with numbers you did not already use in the idea.',
+            'figure: {"kind":"line"|"bar"|"scatter","xLabel":string,"yLabel":string,"caption":string,"series":[{"label":string,"points":[{"x":number,"y":number}]}]}',
+            'line for a trend or a curve, bar to compare categories, scatter for individual measurements. Put the unit in the axis label, at most twelve points per series and at most three series.',
             'Answer with JSON {"beads": [...]}. A bead is either',
-            '{"kind":"choice","idea":string,"question":string,"options":[{"text":string,"correct":boolean,"why":string}]}',
+            '{"kind":"choice","idea":string,"question":string,"figure":object|null,"options":[{"text":string,"correct":boolean,"why":string}]}',
             'or, only as the last bead when the act demands a written answer,',
-            '{"kind":"open","idea":string,"question":string,"expects":string}.',
+            '{"kind":"open","idea":string,"question":string,"figure":object|null,"expects":string}.',
         ].join('\n'),
     },
     {
@@ -99,9 +111,34 @@ const repairMessages = (input: RepairInput): ChatMessage[] => [
     },
 ];
 
+const usableFigure = (figure: Figure | null): Figure | null => {
+    if (figure === null) {
+        return null;
+    }
+    for (const series of figure.series) {
+        const distinct = new Set(series.points.map((point) => point.x));
+        if (distinct.size !== series.points.length) {
+            return null;
+        }
+    }
+    return figure;
+};
+
+const sanitizeBead = (bead: Bead): Bead => {
+    const figure = usableFigure(bead.figure);
+    if (bead.kind === 'choice') {
+        return { kind: 'choice', idea: bead.idea, question: bead.question, options: bead.options, figure };
+    }
+    return { kind: 'open', idea: bead.idea, question: bead.question, expects: bead.expects, figure };
+};
+
 export const planLesson = async (ai: AiProvider, input: PlanInput): Promise<Lesson> => {
     try {
-        return await ai.chatStructured(planMessages(input), strictLessonSchema, { effort: 'high', maxTokens: 16000 });
+        const lesson = await ai.chatStructured(planMessages(input), strictLessonSchema, {
+            effort: 'high',
+            maxTokens: 16000,
+        });
+        return { beads: lesson.beads.map(sanitizeBead) };
     } catch {
         return fallbackLesson({ title: input.act.title, script: input.act.script });
     }

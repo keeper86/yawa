@@ -1,5 +1,6 @@
 'use client';
 
+import { LessonFigure } from '@/components/charts/LessonFigure';
 import { Page } from '@/components/client/Page';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -226,6 +227,11 @@ export default function TutorPage() {
                         </CardHeader>
                         <CardContent className='space-y-4'>
                             <p className='text-sm leading-relaxed whitespace-pre-line'>{bead.idea}</p>
+                            {bead.figure === null ? null : (
+                                <div className='rounded-md border p-3'>
+                                    <LessonFigure figure={bead.figure} />
+                                </div>
+                            )}
                             <p className='text-sm font-medium leading-relaxed'>{bead.question}</p>
                             {bead.kind === 'choice' ? (
                                 <div className='space-y-2'>

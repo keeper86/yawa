@@ -83,6 +83,14 @@ The rule that makes this work is local: the check of a bead is answerable from t
 
 `src/lib/lesson.ts` holds the schema, the credit function and the pure fallbacks; `src/server/tutor/perform.ts` holds the plan prompt, the repair prompt and the strict checks (exactly one correct option per bead, a named `why` on every wrong option). A bead that fails those checks takes the whole plan back to the fallback rather than teaching a broken step.
 
+### Figures
+
+A bead may carry a figure, because some arguments live in the numbers: two series to compare, a trend, the effect of one parameter. The schema is deliberately small — `kind` (`line`, `bar`, `scatter`), axis labels, a caption and at most three series of at most forty points. The prompt asks for a figure only when the argument is in the numbers, never for decoration and never for a single value, and `figure: null` otherwise. Against the trapezoid act the model attached one figure, to the numeric bead, with the numbers it had already used in the idea — which is the behaviour the rule asks for.
+
+A figure is dropped, never fatal. If a series repeats an x value the chart cannot draw, `planLesson` sets that bead's `figure` to null and keeps the bead: a bad chart must not cost the learner the step. The schema rejects the rest before that (kinds, label lengths, point counts), and a plan that fails the schema still falls back to the act as a whole.
+
+What is missing: no log axes, so an exponential-looking curve cannot show its slope; no units check, so the model can label an axis wrongly without anything noticing; and no chart for the tutor to _point at_ ("look at the middle point"). If figures turn out to carry real teaching weight, the next step is a log option plus a `highlight` on a point, not more chart types.
+
 ### Answering
 
 `answerBead` grades a choice **without the model**: the option carries `correct`, so the verdict is arithmetic, instant, free and reproducible. Only a wrong pick calls the model — `repairBead` names the misconception and re-explains the same idea in other words. Two attempts per bead, then the correct option is revealed and the lesson moves on.

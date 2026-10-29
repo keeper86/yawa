@@ -197,6 +197,7 @@ describe('session loop', () => {
                 kind: 'choice',
                 idea: 'Der Fehler der Trapezregel haengt von h mit einer festen Potenz ab.',
                 question: 'Was passiert mit C·h^2, wenn du h halbierst?',
+                figure: null,
                 options: [
                     { text: 'Der Fehler halbiert sich.', correct: false, why: 'Verwechselt h mit h^2.' },
                     { text: 'Der Fehler viertelt sich.', correct: true, why: '' },
@@ -211,6 +212,7 @@ describe('session loop', () => {
                 kind: 'choice',
                 idea: 'Die Ordnung ist die Hochzahl im fuehrenden Fehlerterm.',
                 question: 'Welche Ordnung hat eine Methode mit Fehler D·h^4?',
+                figure: null,
                 options: [
                     { text: 'Ordnung 2.', correct: false, why: 'Liest die Zahl der Stuetzstellen statt der Hochzahl.' },
                     { text: 'Ordnung 4.', correct: true, why: '' },
