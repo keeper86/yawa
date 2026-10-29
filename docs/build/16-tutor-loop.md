@@ -85,24 +85,27 @@ The rule that makes this work is local: the check of a bead is answerable from t
 
 ### Figures
 
-A bead may carry a figure, because some arguments live in the numbers: two series to compare, a trend, the effect of one parameter. The interface is deliberately narrow — the model names a **template**, not a chart:
+A bead may carry a figure, because some arguments live in the numbers. The interface is narrow: the model names a **template**, not a chart.
 
 ```ts
-{ template: 'trend' | 'compare' | 'scatter',
-  x: { label, unit }, y: { label, unit },
-  caption: string,
-  series: [{ label, points: [{ x, y }] }] }   // ≤ 2 series, ≤ 12 points
+{ template: 'trend' | 'scatter', x: { label, unit }, y: { label, unit }, caption, series: [{ label, points }] }
+{ template: 'compare', y: { label, unit }, caption, categories: string[], series: [{ label, values }] }
 ```
 
-`trend` draws a line, `compare` draws bars over numeric categories, `scatter` draws individual measurements. Units are their own field and a dimensionless quantity gets `1`, so an axis cannot be left unlabelled by omission — the renderer drops the parenthetical for `1`.
+`trend` draws a line over a numeric axis, `scatter` individual measurements, `compare` bars over named categories — two to eight of them, with one value per category. Units are their own field and a dimensionless quantity gets `1`, so an axis cannot be left unlabelled by omission.
 
-Three findings worth keeping:
+The bias is deliberately towards drawing. The first version said "only when the argument lives in the numbers", and produced one figure per lesson, often on the bead where it mattered least. The prompt now says: prefer a chart to a bare number, and when unsure, draw it — a chart that adds little costs the learner a glance, a missing one costs them the insight. The trapezoid lesson moved from 1 of 5 beads to 2 of 5, both on the numeric steps.
 
-- **A fragment is invisible to recharts.** Passing the axis children as `<>...</>` compiled, rendered a curve, and silently dropped the axes, the grid, the tooltip and the tick labels — because recharts scans `props.children` for known child types and a fragment hides them. Axis elements are now an array, and `LessonFigure.test.tsx` asserts that axis ticks and grid lines actually exist. A chart test that only checks for a path would have passed a broken chart.
-- **A nested schema makes the model stop charting.** Moving from `kind` to `template` with `x`/`y` objects silently took figures from 1-per-lesson to 0 — validation still passed, because `figure` defaults to null. Adding one literal example figure to the prompt brought it back. Narrowness has to be taught, not just enforced.
-- **A unit requirement that is too strict suppresses the feature.** Requiring a non-empty unit produced _zero_ figures: the model preferred dropping the figure over naming a unit. With `1` for dimensionless quantities and an example, it names units correctly.
+Four findings worth keeping:
 
-A figure is dropped, never fatal: a series that repeats an x value cannot be drawn, so `planLesson` sets that bead's `figure` to null and keeps the bead. Schema failures are different — they reject the plan into the act fallback, which is why the prompt carries the example.
+- **A fragment is invisible to recharts.** Passing the axis children as `<>...</>` compiles, renders a curve, and silently drops axes, grid, tooltip and tick labels, because recharts scans `props.children` for known child types. Axis elements are now an array, and `LessonFigure.test.tsx` asserts that ticks and grid lines exist. A chart test that only looks for a path would pass a broken chart.
+- **A nested schema makes the model stop charting.** Moving from `kind` to `template` with `x`/`y` objects took figures from 1-per-lesson to 0, and validation still passed because `figure` defaults to null. One literal example figure in the prompt brought them back. Narrowness has to be taught, not only enforced.
+- **Too strict a field suppresses the feature.** A required non-empty unit produced zero figures: the model preferred dropping the figure over naming a unit. With `1` for dimensionless quantities and an example, units come out right.
+- **A bias without a ceiling makes wallpaper.** "When unsure, draw it" alone charted _every_ bead. Adding "do not chart a bead just because it mentions a number; one or two beads carry the argument" landed on two, and kept the categories sane.
+
+`compare` exists because of the last one: with only numeric x, the model wrote bars whose category names ended up inside the axis label ("Fall: 1 = linke Summe, 2 = exakt"). Categories are a field now.
+
+A figure is dropped, never fatal: a series that repeats an x value, or a bar series whose length disagrees with the categories, sets that bead's `figure` to null and keeps the bead. Schema failures are different — they reject the plan into the act fallback, which is why the prompt carries two example figures.
 
 ### Scales
 

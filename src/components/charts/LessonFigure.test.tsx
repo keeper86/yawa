@@ -89,26 +89,23 @@ describe('LessonFigure', () => {
         expect(screen.getByRole('button', { name: 'Linear' })).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('never offers a log axis for bars', () => {
-        renderWithIntl(
+    it('draws bars over the named categories and never offers log', () => {
+        const { container } = renderWithIntl(
             <LessonFigure
                 figure={{
-                    ...figure,
                     template: 'compare',
-                    series: [
-                        {
-                            label: 'Fehler',
-                            points: [
-                                { x: 1, y: 0.1667 },
-                                { x: 0.5, y: 0.0417 },
-                                { x: 0.25, y: 0.0104 },
-                            ],
-                        },
-                    ],
+                    y: { label: 'Naeherung', unit: '1' },
+                    caption: 'Linke Summe liegt unter dem exakten Wert.',
+                    categories: ['linke Summe', 'exakt'],
+                    series: [{ label: 'x^2 auf [0,1]', values: [0.25, 0.3333] }],
                 }}
             />,
         );
 
         expect(screen.queryByRole('button', { name: 'Log' })).toBeNull();
+        expect(container.querySelectorAll('.recharts-bar-rectangle').length).toBe(2);
+        const xAxisText = container.querySelector('.recharts-xAxis')?.textContent ?? '';
+        expect(xAxisText).toContain('linke Summe');
+        expect(xAxisText).toContain('exakt');
     });
 });

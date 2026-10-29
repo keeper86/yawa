@@ -313,6 +313,67 @@ describe('planLesson figures', () => {
         });
     });
 
+    it('keeps a compare figure whose values match the categories', async () => {
+        const input = await prepare();
+        const compare = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Die linke Summe liegt unter dem exakten Wert.',
+                    question: 'Welcher Balken ist hoeher?',
+                    figure: {
+                        template: 'compare',
+                        y: { label: 'Naeherung', unit: '1' },
+                        caption: 'Die linke Summe liegt unter dem exakten Wert.',
+                        categories: ['linke Summe', 'exakt'],
+                        series: [{ label: 'x^2 auf [0,1]', values: [0.25, 0.3333] }],
+                    },
+                    options: [
+                        { text: 'exakt', correct: true, why: '' },
+                        { text: 'linke Summe', correct: false, why: 'Verwechselt Naeherung und Exaktheit.' },
+                        { text: 'beide gleich', correct: false, why: 'Ignoriert die Zahlen.' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => compare });
+
+        const planned = await planLesson(ai, { ...input, diagnosis });
+
+        expect(planned.beads[0].figure?.template).toBe('compare');
+    });
+
+    it('drops a compare figure whose values do not match the categories', async () => {
+        const input = await prepare();
+        const misaligned = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Drei Kategorien, zwei Werte - das kann keine Balken zeichnen.',
+                    question: 'Welcher Balken fehlt?',
+                    figure: {
+                        template: 'compare',
+                        y: { label: 'Naeherung', unit: '1' },
+                        caption: 'Ein Wert pro Kategorie.',
+                        categories: ['a', 'b', 'c'],
+                        series: [{ label: 'Werte', values: [0.25, 0.3333] }],
+                    },
+                    options: [
+                        { text: 'c', correct: true, why: '' },
+                        { text: 'a', correct: false, why: 'Verzaehlt sich.' },
+                        { text: 'b', correct: false, why: 'Verzaehlt sich.' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => misaligned });
+
+        const planned = await planLesson(ai, { ...input, diagnosis });
+
+        expect(planned.beads).toHaveLength(1);
+        expect(planned.beads[0].figure).toBeNull();
+    });
+
     it('drops a figure with a repeated x value but keeps the bead', async () => {
         const input = await prepare();
         const broken = {

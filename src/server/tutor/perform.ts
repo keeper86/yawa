@@ -68,12 +68,15 @@ const planMessages = (input: PlanInput): ChatMessage[] => [
             'Every option is a mistake a real learner makes. why names that mistake in one short clause. No joke options, no "all of the above", no options that differ only in wording.',
             `Write in this language: ${input.concept.language}.`,
             'The act notes are written for you, not for the learner. Rewrite them, never quote them.',
-            'A bead may carry a figure when the argument lives in the numbers: two series to compare, a trend, or how one parameter changes the outcome.',
-            'Otherwise set figure to null. Never add a figure for decoration, never for a single value, and never with numbers you did not already use in the idea.',
-            'figure: {"template":"trend"|"compare"|"scatter","x":{"label":string,"unit":string},"y":{"label":string,"unit":string},"caption":string,"series":[{"label":string,"points":[{"x":number,"y":number}]}]}',
-            'trend draws a line over a numeric axis, compare draws bars over numeric categories, scatter draws individual measurements. label names the quantity, unit carries its unit, and a dimensionless quantity gets 1.',
-            'At most twelve points per series and at most two series.',
-            'Example figure: {"template":"trend","x":{"label":"Schrittweite h","unit":"m"},"y":{"label":"Fehler","unit":"m^3"},"caption":"Halbieren von h viertelt den Fehler.","series":[{"label":"Trapez","points":[{"x":0.4,"y":0.08},{"x":0.2,"y":0.02}]}]}',
+            'Figures: prefer a chart to a bare number. When a bead compares two values, sweeps a parameter, shows a trend over three or more points, or shows a before and after, draw it - a chart that adds little costs the learner a glance, a missing one costs them the insight.',
+            'When you are unsure whether a figure helps, draw it. But do not chart a bead just because it mentions a number: one or two beads per lesson carry the argument, and those are the ones to draw.',
+            'Use the numbers of the bead idea or of the act notes and never invent measurements; if the idea has no numbers yet, put the two or three the figure needs into the idea as well.',
+            'figure, form A: {"template":"trend"|"scatter","x":{"label":string,"unit":string},"y":{"label":string,"unit":string},"caption":string,"series":[{"label":string,"points":[{"x":number,"y":number}]}]}',
+            'figure, form B: {"template":"compare","y":{"label":string,"unit":string},"caption":string,"categories":[string],"series":[{"label":string,"values":[number]}]} with one value per category and two to eight categories.',
+            'trend draws a line over a numeric axis, scatter draws individual measurements, compare draws bars over named categories - put the category names in categories, never in an axis label. label names the quantity, unit carries its unit and a dimensionless quantity gets 1.',
+            'At most twelve points per series and at most two series. The caption says what the learner should look at, not what the chart is.',
+            'Example figure A: {"template":"trend","x":{"label":"Schrittweite h","unit":"m"},"y":{"label":"Fehler","unit":"m^3"},"caption":"Halbieren von h viertelt den Fehler.","series":[{"label":"Trapez","points":[{"x":0.4,"y":0.08},{"x":0.2,"y":0.02}]}]}',
+            'Example figure B: {"template":"compare","y":{"label":"Naeherung","unit":"1"},"caption":"Linke Summe liegt unter dem exakten Wert.","categories":["linke Summe","exakt"],"series":[{"label":"x^2 auf [0,1]","values":[0.25,0.3333]}]}',
             'Answer with JSON {"beads": [...]}. A bead is either',
             '{"kind":"choice","idea":string,"question":string,"figure":object|null,"options":[{"text":string,"correct":boolean,"why":string}]}',
             'or, only as the last bead when the act demands a written answer,',
@@ -117,6 +120,12 @@ const usableFigure = (figure: Figure | null): Figure | null => {
     if (figure === null) {
         return null;
     }
+
+    if (figure.template === 'compare') {
+        const aligned = figure.series.every((series) => series.values.length === figure.categories.length);
+        return aligned ? figure : null;
+    }
+
     for (const series of figure.series) {
         const distinct = new Set(series.points.map((point) => point.x));
         if (distinct.size !== series.points.length) {

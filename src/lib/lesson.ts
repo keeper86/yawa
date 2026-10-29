@@ -26,13 +26,28 @@ export const figureAxisSchema = z.object({
     unit: z.string().max(20).default(''),
 });
 
-export const figureSchema = z.object({
-    template: z.enum(['trend', 'compare', 'scatter']),
+export const plotFigureSchema = z.object({
+    template: z.enum(['trend', 'scatter']),
     x: figureAxisSchema,
     y: figureAxisSchema,
     caption: z.string().min(1).max(300),
     series: z.array(figureSeriesSchema).min(1).max(2),
 });
+
+export const barSeriesSchema = z.object({
+    label: z.string().min(1).max(60),
+    values: z.array(z.number().finite()).min(2).max(8),
+});
+
+export const compareFigureSchema = z.object({
+    template: z.literal('compare'),
+    y: figureAxisSchema,
+    caption: z.string().min(1).max(300),
+    categories: z.array(z.string().min(1).max(40)).min(2).max(8),
+    series: z.array(barSeriesSchema).min(1).max(2),
+});
+
+export const figureSchema = z.discriminatedUnion('template', [plotFigureSchema, compareFigureSchema]);
 
 export const choiceBeadSchema = z.object({
     kind: z.literal('choice'),
