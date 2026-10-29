@@ -6,6 +6,7 @@ import { logger } from '../logger';
 import { linkConcepts } from '../graph/relations';
 import { loadAgentContext, toPlanContext, type AgentContext } from './context';
 import { generateActDraft } from './generate';
+import { embedPendingActs } from '../embed/acts';
 import { buildPlanMessages, planSchema, validatePlan, type LecturePlan } from './plan';
 
 export type CreationResult = {
@@ -123,6 +124,14 @@ export const runCreationJob = async (
             failed += 1;
             failures.push(`${unit.conceptSlug}/${unit.templateKey}: ${(error as Error).message}`);
             logger.warn({ unit: unit.conceptSlug, error: (error as Error).message }, 'act generation failed');
+        }
+    }
+
+    if (generated > 0) {
+        try {
+            await embedPendingActs(db, ai, { ownerUserId: context.lecture.owner_user_id });
+        } catch (error) {
+            logger.warn({ error: (error as Error).message }, 'embedding after generation failed');
         }
     }
 

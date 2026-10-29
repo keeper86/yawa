@@ -36,6 +36,7 @@ export const next = () =>
                 actId: z.string(),
                 title: z.string(),
                 script: baseScriptSchema,
+                retrieval: z.unknown(),
             }),
         )
         .mutation(async ({ ctx, input }) =>

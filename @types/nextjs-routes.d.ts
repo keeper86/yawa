@@ -22,7 +22,8 @@ declare module "nextjs-routes" {
     | StaticRoute<"/imprint">
     | StaticRoute<"/lectures">
     | DynamicRoute<"/lectures/[id]", { "id": string }>
-    | StaticRoute<"/messages">;
+    | StaticRoute<"/messages">
+    | StaticRoute<"/tutor">;
 
   interface StaticRoute<Pathname> {
     pathname: Pathname;

@@ -2,6 +2,8 @@ import knex from 'knex';
 import config from '../knexfile';
 import { loadCorpus, seedCorpus } from '../src/server/eval/corpus';
 import { briefSchema } from '../src/lib/lectureBrief';
+import { getAi } from '../src/server/ai';
+import { embedPendingActs } from '../src/server/embed/acts';
 
 const DEMO_TITLE = 'Numerische Integration (Demo)';
 
@@ -102,7 +104,10 @@ const run = async () => {
         );
     }
 
+    const embeddings = await embedPendingActs(database, getAi(), { ownerUserId });
+
     console.log('Corpus seeded:', result);
+    console.log(`Embedded ${embeddings.embedded} acts, ${embeddings.remaining} still pending.`);
     console.log(`Lecture: ${lecture.id} (${DEMO_TITLE}), owner ${ownerUserId}`);
     console.log(`Acts in lecture: ${existingLinks.length + missing.length}, all proposed -> review queue has work.`);
     console.log('Open /lectures and click the lecture.');

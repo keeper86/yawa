@@ -384,19 +384,20 @@
             "rejectedToast": "Akt abgelehnt",
             "shortcuts": "A annehmen, R ablehnen, J weiter, K zurueck",
             "rubricCodes": {
-                "grounded-in-source": "Auf eine Quelle gestuetzt",
-                "single-concept": "Behandelt genau ein Konzept",
-                "steps-are-explicit": "Schritte sind explizit",
-                "practice-fades": "Uebung wird ausgeschlichen",
-                "criterion-observable": "Erfolgskriterium ist beobachtbar",
-                "prompts-justification": "Fordert eine Begruendung",
-                "cases-differ-in-one-feature": "Faelle unterscheiden sich in einem Merkmal",
-                "similarities-surfaced": "Gemeinsamkeiten werden benannt",
-                "prediction-before-observation": "Vorhersage kommt zuerst",
-                "outcome-explained": "Ergebnis wird erklaert",
-                "no-cue-in-question": "Kein Hinweis in der Frage",
-                "tone-matches-brief": "Ton passt zum Briefing"
-            }
+                "grounded-in-source": "Jeder Schritt laesst sich auf eine Passage zurueckfuehren",
+                "single-concept": "Bleibt bei genau einem Konzept",
+                "steps-are-explicit": "Jeder Schritt ist ohne Raten machbar",
+                "practice-fades": "Die Unterstuetzung wird Schritt fuer Schritt zurueckgenommen",
+                "criterion-observable": "Das Erfolgskriterium ist pruefbar",
+                "prompts-justification": "Es fragt nach einem Grund, nicht nur nach einem Ergebnis",
+                "cases-differ-in-one-feature": "Die Faelle unterscheiden sich in genau einem Merkmal",
+                "similarities-surfaced": "Es benennt, was die Faelle gemeinsam haben",
+                "prediction-before-observation": "Die Vorhersage kommt vor dem Ergebnis",
+                "outcome-explained": "Es erklaert das Ergebnis, nicht nur zeigt es",
+                "no-cue-in-question": "Die Frage verraet die Antwort nicht",
+                "tone-matches-brief": "Der Ton passt zum Briefing"
+            },
+            "rubricHint": "Pruefpunkte, keine Bedingungen: ablehnen duerfen Sie wegen jedes Punktes."
         },
         "publish": "Vorlesung veroeffentlichen",
         "publishedToast": "Vorlesung veroeffentlicht",
@@ -407,5 +408,34 @@
             "predict-observe-explain": "Vorhersagen, beobachten, erklaeren",
             "retrieval-practice": "Abrufuebung"
         }
+    },
+    "Tutor": {
+        "title": "Tutor",
+        "subtitle": "Ein Akt nach dem anderen. Antworten Sie in eigenen Worten.",
+        "start": "Sitzung starten",
+        "starting": "Wird gestartet",
+        "pickGoal": "Der Tutor waehlt das Konzept mit dem groessten Bedarf.",
+        "close": "Sitzung beenden",
+        "answer": "Ihre Antwort",
+        "submit": "Antwort abgeben",
+        "submitting": "Wird bewertet",
+        "nextAct": "Naechster Akt",
+        "result": "Ergebnis",
+        "score": "Bewertung",
+        "mastery": "Wissensstand jetzt",
+        "criterion": "Erfolgskriterium",
+        "whyTitle": "Warum dieser Akt",
+        "whyHop": "Abstand zum Ziel",
+        "whyVia": "Gefunden ueber",
+        "whyScore": "Rangwert",
+        "whyGoal": "Zielkonzept",
+        "viaGraph": "den Voraussetzungsgraphen",
+        "viaVector": "semantische Aehnlichkeit",
+        "viaLexical": "Formulierung",
+        "emptyTitle": "Noch nichts zu lehren",
+        "emptyHint": "Nehmen Sie Akte in einer Vorlesung an und veroeffentlichen Sie sie. Nur veroeffentlichte Akte werden ausgeliefert.",
+        "goalLabel": "Konzept",
+        "startQuery": "Was soll ich als naechstes lernen?",
+        "nextQuery": "Weiter"
     }
 }

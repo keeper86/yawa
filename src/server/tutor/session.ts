@@ -21,6 +21,7 @@ export type NextTurn = {
     actId: string;
     title: string;
     script: Script;
+    retrieval: unknown;
 };
 
 const loadSession = async (db: Knex<Tables>, sessionId: string, userId: string): Promise<TutorSessions> => {
@@ -104,7 +105,13 @@ export const nextAct = async (
         })
         .returning('*');
 
-    return { turnId: turn.id, actId: act.id, title: act.title, script: act.script as Script };
+    return {
+        turnId: turn.id,
+        actId: act.id,
+        title: act.title,
+        script: act.script as Script,
+        retrieval: turn.retrieval,
+    };
 };
 
 export const respondToAct = async (

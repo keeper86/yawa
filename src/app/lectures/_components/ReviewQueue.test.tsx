@@ -34,7 +34,7 @@ describe('ReviewQueue', () => {
 
         expect(screen.getByText('Trapezregel mit zwei Teilen')).toBeInTheDocument();
         expect(screen.getByText('Worked example')).toBeInTheDocument();
-        expect(screen.getByText(/Grounded in a source/)).toBeInTheDocument();
+        expect(screen.getByText(/Every step traces back to a passage/)).toBeInTheDocument();
         expect(screen.getByText('Der Wert ist berechnet.')).toBeInTheDocument();
     });
 

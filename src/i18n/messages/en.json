@@ -384,19 +384,20 @@
             "rejectedToast": "Act rejected",
             "shortcuts": "A accept, R reject, J next, K previous",
             "rubricCodes": {
-                "grounded-in-source": "Grounded in a source",
-                "single-concept": "Teaches one concept",
-                "steps-are-explicit": "Steps are explicit",
-                "practice-fades": "Practice fades out",
-                "criterion-observable": "Success criterion is observable",
-                "prompts-justification": "Prompts a justification",
-                "cases-differ-in-one-feature": "Cases differ in one feature",
-                "similarities-surfaced": "Similarities are surfaced",
-                "prediction-before-observation": "Prediction comes first",
-                "outcome-explained": "Outcome is explained",
-                "no-cue-in-question": "No cue in the question",
-                "tone-matches-brief": "Tone matches the brief"
-            }
+                "grounded-in-source": "Every step traces back to a passage",
+                "single-concept": "Stays on one concept",
+                "steps-are-explicit": "Each step is doable without guessing",
+                "practice-fades": "Support is withdrawn step by step",
+                "criterion-observable": "The success criterion can be checked",
+                "prompts-justification": "It asks for a reason, not just a result",
+                "cases-differ-in-one-feature": "The cases differ in exactly one feature",
+                "similarities-surfaced": "It names what the cases share",
+                "prediction-before-observation": "The prediction comes before the outcome",
+                "outcome-explained": "It explains the outcome, not only shows it",
+                "no-cue-in-question": "The question gives no hint at the answer",
+                "tone-matches-brief": "The register matches the brief"
+            },
+            "rubricHint": "Points to look at, not gates: rejecting for any of them is your call."
         },
         "publish": "Publish lecture",
         "publishedToast": "Lecture published",
@@ -407,5 +408,34 @@
             "predict-observe-explain": "Predict, observe, explain",
             "retrieval-practice": "Retrieval practice"
         }
+    },
+    "Tutor": {
+        "title": "Tutor",
+        "subtitle": "One act at a time. Answer in your own words.",
+        "start": "Start a session",
+        "starting": "Starting",
+        "pickGoal": "The tutor picks the concept that needs attention most.",
+        "close": "End session",
+        "answer": "Your answer",
+        "submit": "Submit answer",
+        "submitting": "Grading",
+        "nextAct": "Next act",
+        "result": "Result",
+        "score": "Score",
+        "mastery": "Mastery now",
+        "criterion": "Success criterion",
+        "whyTitle": "Why this act",
+        "whyHop": "Distance to the goal",
+        "whyVia": "Found through",
+        "whyScore": "Rank score",
+        "whyGoal": "Goal concept",
+        "viaGraph": "the prerequisite graph",
+        "viaVector": "semantic similarity",
+        "viaLexical": "wording",
+        "emptyTitle": "Nothing to teach yet",
+        "emptyHint": "Accept acts in a lecture and publish it first. Only published acts are served.",
+        "goalLabel": "Concept",
+        "startQuery": "What should I learn next?",
+        "nextQuery": "Next"
     }
 }
