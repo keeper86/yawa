@@ -28,6 +28,7 @@ export const DOMAIN_ERROR_CODES = [
     'creationJobActive',
     'sessionNotFound',
     'noActAvailable',
+    'invalidAnswer',
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];

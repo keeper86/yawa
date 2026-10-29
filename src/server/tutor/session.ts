@@ -1,15 +1,18 @@
+import { type Bead, correctOption, creditFor } from '@/lib/lesson';
 import type { Tables, TutorSessions } from '@/types/db_schemas';
 import type { SessionMode } from '@/types/enums';
 import type { Knex } from 'knex';
 import type { AiProvider } from '../ai';
 import { DomainFailure } from '../domainError';
 import { retrieve, topCandidates } from '../retrieval';
+import type { Script } from '../templates';
 import { diagnose, pickGoalConcept } from './diagnose';
 import { gradeAnswer } from './grade';
 import { updateMastery } from './mastery';
-import { findAsk, type Move } from '@/lib/lesson';
-import { performAct, reactToAnswer } from './perform';
-import type { Script } from '../templates';
+import { planLesson, repairBead } from './perform';
+
+const MAX_ATTEMPTS = 2;
+const CORRECT_AT = 0.7;
 
 export type StartInput = {
     userId: string;
@@ -22,22 +25,23 @@ export type NextTurn = {
     turnId: string;
     actId: string;
     title: string;
-    moves: Move[];
+    beads: Bead[];
     retrieval: unknown;
 };
 
-export type RespondResult = {
-    outcome: number;
-    mastery: number | null;
-    moves: Move[];
-};
+export type AnswerInput =
+    | { sessionId: string; userId: string; beadIndex: number; choice: { optionIndex: number } }
+    | { sessionId: string; userId: string; beadIndex: number; open: { answer: string } };
 
-const readMoves = (content: unknown): Move[] => {
-    if (typeof content !== 'object' || content === null) {
-        return [];
-    }
-    const moves = (content as { moves?: unknown }).moves;
-    return Array.isArray(moves) ? (moves as Move[]) : [];
+export type BeadOutcome = {
+    verdict: 'correct' | 'wrong';
+    repair: string | null;
+    revealOption: number | null;
+    revealAnswer: string | null;
+    nextBeadIndex: number | null;
+    done: boolean;
+    attempts: number;
+    mastery: number | null;
 };
 
 const loadSession = async (db: Knex<Tables>, sessionId: string, userId: string): Promise<TutorSessions> => {
@@ -54,6 +58,14 @@ const loadSession = async (db: Knex<Tables>, sessionId: string, userId: string):
 const nextSeq = async (db: Knex<Tables>, sessionId: string): Promise<number> => {
     const row = await db('turns').where({ session_id: sessionId }).max<{ max: number | null }>('seq as max').first();
     return (row?.max ?? 0) + 1;
+};
+
+const readBeads = (content: unknown): Bead[] => {
+    if (typeof content !== 'object' || content === null) {
+        return [];
+    }
+    const beads = (content as { beads?: unknown }).beads;
+    return Array.isArray(beads) ? (beads as Bead[]) : [];
 };
 
 export const startSession = async (db: Knex<Tables>, input: StartInput): Promise<TutorSessions> => {
@@ -108,7 +120,7 @@ export const nextAct = async (
         throw new DomainFailure('conceptNotFound', 'Concept not found');
     }
 
-    const moves = await performAct(ai, {
+    const lesson = await planLesson(ai, {
         act: { id: act.id, title: act.title, script: act.script as Script },
         concept: { title: concept.title, summary: concept.summary, language: concept.language },
         diagnosis,
@@ -120,7 +132,7 @@ export const nextAct = async (
             seq: await nextSeq(db, session.id),
             role: 'agent',
             act_id: act.id,
-            content: { actId: act.id, title: act.title, moves },
+            content: { actId: act.id, title: act.title, beads: lesson.beads },
             retrieval: {
                 chosen: chosen.actId,
                 score: chosen.score,
@@ -136,77 +148,45 @@ export const nextAct = async (
         turnId: turn.id,
         actId: act.id,
         title: act.title,
-        moves,
+        beads: lesson.beads,
         retrieval: turn.retrieval,
     };
 };
 
-export const respondToAct = async (
-    db: Knex<Tables>,
+const judge = async (
     ai: AiProvider,
-    input: { sessionId: string; userId: string; answer: string },
-): Promise<RespondResult> => {
-    const session = await loadSession(db, input.sessionId, input.userId);
-
-    const presented = await db('turns')
-        .where({ session_id: session.id, role: 'agent' })
-        .whereNotNull('act_id')
-        .orderBy('seq', 'desc')
-        .first();
-    if (!presented) {
-        throw new DomainFailure('noActAvailable', 'There is no act waiting for an answer');
+    bead: Bead,
+    input: AnswerInput,
+): Promise<{ correct: boolean; chosen: { text: string; why: string }; answer: string | null }> => {
+    if (bead.kind === 'choice') {
+        if (!('choice' in input)) {
+            throw new DomainFailure('invalidAnswer', 'This step expects a choice');
+        }
+        const option = bead.options[input.choice.optionIndex];
+        if (!option) {
+            throw new DomainFailure('invalidAnswer', 'There is no such option');
+        }
+        return { correct: option.correct, chosen: { text: option.text, why: option.why }, answer: null };
     }
 
-    const presentedActId = presented.act_id;
-    if (presentedActId === null) {
-        throw new DomainFailure('noActAvailable', 'There is no act waiting for an answer');
+    if (!('open' in input)) {
+        throw new DomainFailure('invalidAnswer', 'This step expects a written answer');
     }
+    const grade = await gradeAnswer(ai, { criterion: bead.expects, answer: input.open.answer });
+    return {
+        correct: grade.score >= CORRECT_AT,
+        chosen: { text: input.open.answer, why: grade.reason },
+        answer: input.open.answer,
+    };
+};
 
-    const act = await db('acts').where({ id: presentedActId }).first();
-    if (!act) {
-        throw new DomainFailure('actNotFound', 'Act not found');
-    }
-
-    const script = act.script as Script;
-    const grade = await gradeAnswer(ai, { criterion: script.success.criterion, answer: input.answer });
-
-    const asked = findAsk(readMoves(presented.content));
-    const moves = await reactToAnswer(ai, {
-        act: { title: act.title, script },
-        asked: {
-            question: asked?.question ?? script.steps[script.steps.length - 1].text,
-            expects: asked?.expects ?? script.success.criterion,
-        },
-        answer: input.answer,
-        grade,
-    });
-
-    const [answerTurn] = await db('turns')
-        .insert({
-            session_id: session.id,
-            seq: await nextSeq(db, session.id),
-            role: 'learner',
-            act_id: null,
-            content: { answer: input.answer },
-        })
-        .returning('*');
-
-    await db('turns').insert({
-        session_id: session.id,
-        seq: await nextSeq(db, session.id),
-        role: 'agent',
-        act_id: act.id,
-        content: { graded: true, reason: grade.reason, substantive: grade.substantive, moves },
-        outcome: grade.score,
-    });
-
-    if (session.mode === 'rehearsal') {
-        return { outcome: grade.score, mastery: null, moves };
-    }
-
-    return db.transaction(async (trx) => {
+const recordEvidence = async (
+    db: Knex<Tables>,
+    input: { session: TutorSessions; turnId: string; credit: number },
+): Promise<number> =>
+    db.transaction(async (trx) => {
         const current = await trx('learner_concept_state')
-            .where({ user_id: session.user_id, concept_id: session.goal_concept_id })
+            .where({ user_id: input.session.user_id, concept_id: input.session.goal_concept_id })
             .forUpdate()
             .first();
 
@@ -216,15 +196,15 @@ export const respondToAct = async (
                 confidence: current?.confidence ?? 0,
                 evidenceCount: current?.evidence_count ?? 0,
             },
-            grade.score,
+            input.credit,
         );
 
         await trx('learner_evidence').insert({
-            user_id: session.user_id,
-            concept_id: session.goal_concept_id,
-            turn_id: answerTurn.id,
+            user_id: input.session.user_id,
+            concept_id: input.session.goal_concept_id,
+            turn_id: input.turnId,
             kind: 'answer',
-            outcome: grade.score,
+            outcome: input.credit,
         });
 
         const values = {
@@ -237,18 +217,103 @@ export const respondToAct = async (
 
         if (current) {
             await trx('learner_concept_state')
-                .where({ user_id: session.user_id, concept_id: session.goal_concept_id })
+                .where({ user_id: input.session.user_id, concept_id: input.session.goal_concept_id })
                 .update(values);
         } else {
             await trx('learner_concept_state').insert({
-                user_id: session.user_id,
-                concept_id: session.goal_concept_id,
+                user_id: input.session.user_id,
+                concept_id: input.session.goal_concept_id,
                 ...values,
             });
         }
 
-        return { outcome: grade.score, mastery: updated.mastery, moves };
+        return updated.mastery;
     });
+
+export const answerBead = async (db: Knex<Tables>, ai: AiProvider, input: AnswerInput): Promise<BeadOutcome> => {
+    const session = await loadSession(db, input.sessionId, input.userId);
+
+    const lessonTurn = await db('turns')
+        .where({ session_id: session.id, role: 'agent' })
+        .whereNotNull('act_id')
+        .whereRaw("jsonb_exists(content, 'beads')")
+        .orderBy('seq', 'desc')
+        .first();
+    if (!lessonTurn || lessonTurn.act_id === null) {
+        throw new DomainFailure('noActAvailable', 'There is no lesson waiting for an answer');
+    }
+
+    const beads = readBeads(lessonTurn.content);
+    const bead = beads[input.beadIndex];
+    if (!bead) {
+        throw new DomainFailure('actNotFound', 'This lesson has no such step');
+    }
+
+    const answered = await judge(ai, bead, input);
+    const previous = await db('turns')
+        .where({ session_id: session.id, role: 'learner' })
+        .where('seq', '>', lessonTurn.seq)
+        .whereRaw("content->>'beadIndex' = ?", [String(input.beadIndex)]);
+    if (previous.length >= MAX_ATTEMPTS) {
+        throw new DomainFailure('invalidAnswer', 'This step is already answered');
+    }
+    const attempts = previous.length + 1;
+    const resolved = answered.correct || attempts >= MAX_ATTEMPTS;
+
+    const [learnerTurn] = await db('turns')
+        .insert({
+            session_id: session.id,
+            seq: await nextSeq(db, session.id),
+            role: 'learner',
+            act_id: null,
+            content:
+                answered.answer === null
+                    ? { beadIndex: input.beadIndex, optionIndex: 'choice' in input ? input.choice.optionIndex : null }
+                    : { beadIndex: input.beadIndex, answer: answered.answer },
+        })
+        .returning('*');
+
+    const repair =
+        answered.correct || resolved
+            ? null
+            : await repairBead(ai, { bead, chosen: answered.chosen, attempt: attempts });
+    const revealOption = resolved && !answered.correct && bead.kind === 'choice' ? correctOption(bead) : null;
+    const revealAnswer = resolved && !answered.correct && bead.kind === 'open' ? bead.expects : null;
+    const nextBeadIndex = resolved ? input.beadIndex + 1 : null;
+    const done = resolved && input.beadIndex + 1 >= beads.length;
+    const credit = creditFor({ correct: answered.correct, attempts, revealed: !answered.correct });
+
+    await db('turns').insert({
+        session_id: session.id,
+        seq: await nextSeq(db, session.id),
+        role: 'agent',
+        act_id: lessonTurn.act_id,
+        content: {
+            beadIndex: input.beadIndex,
+            verdict: answered.correct ? 'correct' : 'wrong',
+            repair,
+            revealOption,
+            revealAnswer,
+        },
+        outcome: credit,
+    });
+
+    const outcome: BeadOutcome = {
+        verdict: answered.correct ? 'correct' : 'wrong',
+        repair,
+        revealOption,
+        revealAnswer,
+        nextBeadIndex,
+        done,
+        attempts,
+        mastery: null,
+    };
+
+    if (!resolved || session.mode === 'rehearsal') {
+        return outcome;
+    }
+
+    return { ...outcome, mastery: await recordEvidence(db, { session, turnId: learnerTurn.id, credit }) };
 };
 
 export const closeSession = async (

@@ -28,7 +28,8 @@
         "planIncomplete": "Der Plan erfüllt das Briefing nicht vollständig",
         "creationJobActive": "Für diese Vorlesung läuft bereits ein Erzeugungsauftrag",
         "sessionNotFound": "Sitzung nicht gefunden",
-        "noActAvailable": "Dafür gibt es gerade keinen passenden Akt"
+        "noActAvailable": "Dafür gibt es gerade keinen passenden Akt",
+        "invalidAnswer": "Diese Antwort passt nicht zum aktuellen Schritt"
     },
     "Units": {
         "day": "Tag",
@@ -420,15 +421,15 @@
         "submit": "Antwort abgeben",
         "submitting": "Wird bewertet",
         "nextAct": "Naechster Akt",
-        "result": "Ergebnis",
-        "score": "Bewertung",
         "mastery": "Wissensstand jetzt",
-        "hint": "Hinweis",
-        "verdict": {
-            "correct": "Richtig",
-            "partial": "Teilweise richtig",
-            "incorrect": "Noch nicht"
-        },
+        "progress": "Schritt {current} von {total}",
+        "pickHint": "Waehlen Sie die Option, die Ihrer Meinung nach stimmt.",
+        "correct": "Richtig",
+        "wrong": "Noch nicht",
+        "revealChoice": "Die richtige Antwort ist markiert.",
+        "revealOpen": "Erwartet war:",
+        "retry": "Nochmal versuchen",
+        "nextBead": "Weiter",
         "whyTitle": "Warum dieser Akt",
         "whyHop": "Abstand zum Ziel",
         "whyVia": "Gefunden ueber",

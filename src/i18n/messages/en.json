@@ -28,7 +28,8 @@
         "planIncomplete": "The plan misses part of the brief",
         "creationJobActive": "A creation job is already running for this lecture",
         "sessionNotFound": "Session not found",
-        "noActAvailable": "There is no act for this right now"
+        "noActAvailable": "There is no act for this right now",
+        "invalidAnswer": "This answer does not fit the current step"
     },
     "Units": {
         "day": "day",
@@ -420,15 +421,15 @@
         "submit": "Submit answer",
         "submitting": "Grading",
         "nextAct": "Next act",
-        "result": "Result",
-        "score": "Score",
         "mastery": "Mastery now",
-        "hint": "Hint",
-        "verdict": {
-            "correct": "Correct",
-            "partial": "Partly right",
-            "incorrect": "Not there yet"
-        },
+        "progress": "Step {current} of {total}",
+        "pickHint": "Pick the option you think is right.",
+        "correct": "Correct",
+        "wrong": "Not yet",
+        "revealChoice": "The right answer is marked.",
+        "revealOpen": "Expected was:",
+        "retry": "Try again",
+        "nextBead": "Continue",
         "whyTitle": "Why this act",
         "whyHop": "Distance to the goal",
         "whyVia": "Found through",

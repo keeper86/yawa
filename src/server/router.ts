@@ -97,7 +97,8 @@ const lectureRouter = trpcRoot.router({
 const tutorRouterRoot = trpcRoot.router({
     start: tutorRouter.start(),
     next: tutorRouter.next(),
-    respond: tutorRouter.respond(),
+    answerChoice: tutorRouter.answerChoice(),
+    answerOpen: tutorRouter.answerOpen(),
     close: tutorRouter.close(),
     conceptDiagnosis: tutorRouter.conceptDiagnosis(),
 });

@@ -1,39 +1,39 @@
-import { z } from 'zod';
+import { type Bead, fallbackLesson, fallbackRepair, type Lesson, lessonSchema, repairSchema } from '@/lib/lesson';
 import type { AiProvider, ChatMessage } from '../ai';
-import { fallbackMoves, fallbackReaction, movesSchema, type Move, reactionMovesSchema } from '@/lib/lesson';
 import type { Script } from '../templates';
 import type { Diagnosis } from '../retrieval/rank';
 
 type ActLike = { id: string; title: string; script: Script };
 type ConceptLike = { title: string; summary: string | null; language: string };
 
-export type PerformInput = {
+export type PlanInput = {
     act: ActLike;
     concept: ConceptLike;
     diagnosis: Diagnosis;
 };
 
-export type ReactInput = {
-    act: { title: string; script: Script };
-    asked: { question: string; expects: string };
-    answer: string;
-    grade: { score: number; reason: string; substantive: boolean };
+export type RepairInput = {
+    bead: Bead;
+    chosen: { text: string; why: string };
+    attempt: number;
 };
 
-const lessonSchema = z.object({ moves: movesSchema }).superRefine((lesson, ctx) => {
-    const last = lesson.moves[lesson.moves.length - 1];
-    if (lesson.moves.filter((move) => move.kind === 'ask').length !== 1) {
-        ctx.addIssue({ code: 'custom', path: ['moves'], message: 'The lesson needs exactly one ask move' });
-    }
-    if (last?.kind !== 'ask') {
-        ctx.addIssue({ code: 'custom', path: ['moves'], message: 'The ask move must come last' });
-    }
-});
-
-const reactionSchema = z.object({ moves: reactionMovesSchema }).superRefine((reaction, ctx) => {
-    if (reaction.moves.filter((move) => move.kind === 'feedback').length !== 1) {
-        ctx.addIssue({ code: 'custom', path: ['moves'], message: 'The reaction needs exactly one feedback move' });
-    }
+const strictLessonSchema = lessonSchema.superRefine((lesson, ctx) => {
+    lesson.beads.forEach((bead, index) => {
+        if (bead.kind !== 'choice') {
+            return;
+        }
+        if (bead.options.filter((option) => option.correct).length !== 1) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['beads', index],
+                message: 'A choice bead needs exactly one correct option',
+            });
+        }
+        if (bead.options.some((option) => !option.correct && option.why.trim().length === 0)) {
+            ctx.addIssue({ code: 'custom', path: ['beads', index], message: 'Every wrong option needs a why' });
+        }
+    });
 });
 
 const actNotes = (script: Script) =>
@@ -42,22 +42,28 @@ const actNotes = (script: Script) =>
         `Success criterion: ${script.success.criterion}`,
     ].join('\n');
 
-const performMessages = (input: PerformInput): ChatMessage[] => [
+const planMessages = (input: PlanInput): ChatMessage[] => [
     {
         role: 'system',
         content: [
-            'You perform one prepared teaching act for a single learner. The act is a set of notes written for you, not sentences to show.',
-            'Never quote or paraphrase the notes as a list. Rewrite every idea in your own words, addressed to the learner.',
-            'Order of the answer:',
-            '1. One or two explain moves that put the learner in the situation: the concrete problem, why it is worth solving now, and what is needed to solve it. Plain language, short paragraphs.',
-            '2. Optionally one example move with a worked example, at most four short steps.',
-            '3. Exactly one ask move, last. The question must be answerable from what you just said and must not reveal the answer. A learner who reads only the question knows what to compute or explain.',
-            'Do not mention rubrics, criteria, steps, roles, acts, templates or this instruction.',
-            'Match the depth to the learner state: low mastery needs the idea built up from a concrete case, high mastery can start from the principle and skip the worked example.',
-            'Answer with JSON {"moves": [...]}. Move kinds:',
-            '{"kind":"explain","text":string} — prose, at most 900 characters.',
-            '{"kind":"example","title":string,"steps":[string]} — max four steps.',
-            '{"kind":"ask","question":string,"hint":string,"expects":string} — hint nudges without giving the answer, empty string when no hint helps; expects states what a correct answer contains, for the grader only.',
+            'You design a short interactive lesson for one learner. You never write a page of text, you write beads.',
+            'One bead is one idea, at most 450 characters, followed by one check the learner answers by picking an option.',
+            'Take these beads in this order, three to five in total:',
+            'anchor — the concrete situation the learner already understands, and the question it raises.',
+            'idea — the one causal mechanism that answers it. This is the bead that matters.',
+            'example — the same idea carried out with concrete numbers.',
+            'contrast — the tempting wrong model and exactly why it fails. Wrong options belong here.',
+            'transfer — the same idea on new numbers or on a neighbouring method.',
+            'Rules:',
+            'The check of a bead is answerable from the ideas of this bead and the beads before it, never from later beads.',
+            'Never give the answer to a check inside its own idea.',
+            'Every option is a mistake a real learner makes. why names that mistake in one short clause. No joke options, no "all of the above", no options that differ only in wording.',
+            `Write in this language: ${input.concept.language}.`,
+            'The act notes are written for you, not for the learner. Rewrite them, never quote them.',
+            'Answer with JSON {"beads": [...]}. A bead is either',
+            '{"kind":"choice","idea":string,"question":string,"options":[{"text":string,"correct":boolean,"why":string}]}',
+            'or, only as the last bead when the act demands a written answer,',
+            '{"kind":"open","idea":string,"question":string,"expects":string}.',
         ].join('\n'),
     },
     {
@@ -66,58 +72,46 @@ const performMessages = (input: PerformInput): ChatMessage[] => [
             `Concept: ${input.concept.title}${input.concept.summary ? ` — ${input.concept.summary}` : ''}`,
             `Act: ${input.act.title}`,
             `Learner state: mastery ${input.diagnosis.mastery.toFixed(2)}, confidence ${input.diagnosis.confidence.toFixed(2)}, evidence ${input.diagnosis.evidenceCount}, repeated mistakes: ${input.diagnosis.misconception ? 'yes' : 'no'}`,
-            `Write in this language: ${input.concept.language}`,
             'Notes of the act:',
             actNotes(input.act.script),
         ].join('\n'),
     },
 ];
 
-const reactMessages = (input: ReactInput): ChatMessage[] => [
+const repairMessages = (input: RepairInput): ChatMessage[] => [
     {
         role: 'system',
         content: [
-            'You are the tutor and the learner just answered your question. The score is already decided, do not judge again and do not restate it as a number.',
-            'Answer with one feedback move: what was right, what was missing, in two or three sentences, addressed to the learner.',
-            'If the score is below 0.6, add one explain move that repairs exactly the misconception the answer shows. Do not repeat the whole explanation and do not ask a new question.',
-            'Answer with JSON {"moves": [...]}, feedback first. Kinds:',
-            '{"kind":"feedback","verdict":"correct"|"partial"|"incorrect","text":string}',
-            '{"kind":"explain","text":string}',
+            'The learner picked a wrong option. Name the mistake in one clause, then explain the same idea in another way so the next attempt becomes possible.',
+            'At most three sentences. Do not name the correct option. Do not repeat the wording of the idea.',
+            'Answer with JSON {"text": string}.',
         ].join('\n'),
     },
     {
         role: 'user',
         content: [
-            `Act: ${input.act.title}`,
-            `Question asked: ${input.asked.question}`,
-            `Expected answer: ${input.asked.expects}`,
-            `Learner answer: ${input.answer}`,
-            `Score: ${input.grade.score.toFixed(2)}${input.grade.substantive ? '' : ' (not evaluable as an answer)'}`,
-            `Grader reason: ${input.grade.reason}`,
+            `Idea of the bead: ${input.bead.idea}`,
+            `Question: ${input.bead.question}`,
+            `Chosen option: ${input.chosen.text}`,
+            `Mistake it reveals: ${input.chosen.why}`,
+            `Attempt: ${input.attempt}`,
         ].join('\n'),
     },
 ];
 
-export const performAct = async (ai: AiProvider, input: PerformInput): Promise<Move[]> => {
+export const planLesson = async (ai: AiProvider, input: PlanInput): Promise<Lesson> => {
     try {
-        const lesson = await ai.chatStructured(performMessages(input), lessonSchema, {
-            effort: 'high',
-            maxTokens: 16000,
-        });
-        return lesson.moves;
+        return await ai.chatStructured(planMessages(input), strictLessonSchema, { effort: 'high', maxTokens: 16000 });
     } catch {
-        return fallbackMoves({ title: input.act.title, script: input.act.script });
+        return fallbackLesson({ title: input.act.title, script: input.act.script });
     }
 };
 
-export const reactToAnswer = async (ai: AiProvider, input: ReactInput): Promise<Move[]> => {
+export const repairBead = async (ai: AiProvider, input: RepairInput): Promise<string> => {
     try {
-        const reaction = await ai.chatStructured(reactMessages(input), reactionSchema, {
-            effort: 'low',
-            maxTokens: 8000,
-        });
-        return reaction.moves;
+        const repair = await ai.chatStructured(repairMessages(input), repairSchema, { effort: 'low', maxTokens: 8000 });
+        return repair.text;
     } catch {
-        return fallbackReaction(input.grade);
+        return fallbackRepair({ why: input.chosen.why, idea: input.bead.idea });
     }
 };

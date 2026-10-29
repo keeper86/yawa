@@ -14,10 +14,16 @@ export const useNextAct = () => {
     return useMutation(trpc.tutor.next.mutationOptions());
 };
 
-export const useRespondToAct = () => {
+export const useAnswerChoice = () => {
     const trpc = useTRPC();
 
-    return useMutation(trpc.tutor.respond.mutationOptions());
+    return useMutation(trpc.tutor.answerChoice.mutationOptions());
+};
+
+export const useAnswerOpen = () => {
+    const trpc = useTRPC();
+
+    return useMutation(trpc.tutor.answerOpen.mutationOptions());
 };
 
 export const useCloseSession = () => {

@@ -7,7 +7,7 @@ import { getDb, testUsers } from 'tests/vitest/setupTestcontainer';
 import { describe, expect, it } from 'vitest';
 import { diagnose } from './diagnose';
 import { learningRate, updateMastery } from './mastery';
-import { closeSession, nextAct, respondToAct, startSession } from './session';
+import { answerBead, closeSession, nextAct, startSession } from './session';
 
 const learner = testUsers.testUser.user_id;
 const QUERY = 'Warum stimmt meine Simpson-Naeherung nicht?';
@@ -114,10 +114,15 @@ describe('diagnose', () => {
             mode: 'study',
             lectureId: null,
         });
+        const miss = (score: number, answer: string) =>
+            answerBead(getDb(), ai(score), { sessionId: session.id, userId: learner, beadIndex: 0, open: { answer } });
+
         await nextAct(getDb(), ai(0.2), { sessionId: session.id, userId: learner, query: QUERY });
-        await respondToAct(getDb(), ai(0.2), { sessionId: session.id, userId: learner, answer: 'weiss nicht' });
+        await miss(0.2, 'weiss nicht');
+        await miss(0.2, 'weiss nicht');
         await nextAct(getDb(), ai(0.2), { sessionId: session.id, userId: learner, query: QUERY });
-        await respondToAct(getDb(), ai(0.3), { sessionId: session.id, userId: learner, answer: 'immer noch nicht' });
+        await miss(0.3, 'immer noch nicht');
+        await miss(0.3, 'immer noch nicht');
 
         const diagnosis = await diagnose(getDb(), learner, concept.id);
 
@@ -168,13 +173,14 @@ describe('session loop', () => {
         });
         await nextAct(getDb(), ai(), { sessionId: session.id, userId: learner, query: QUERY });
 
-        const result = await respondToAct(getDb(), ai(1), {
+        const result = await answerBead(getDb(), ai(1), {
             sessionId: session.id,
             userId: learner,
-            answer: '3, weil 1*(0+1+2)',
+            beadIndex: 0,
+            open: { answer: '3, weil 1*(0+1+2)' },
         });
 
-        expect(result.outcome).toBe(1);
+        expect(result.verdict).toBe('correct');
         expect(result.mastery).toBeGreaterThan(0.5);
         const state = await getDb()('learner_concept_state')
             .where({ user_id: learner, concept_id: concept.id })
@@ -185,57 +191,161 @@ describe('session loop', () => {
         expect(evidence[0].kind).toBe('answer');
     });
 
-    it('presents the act as a lesson that ends in one answerable question', async () => {
-        const { concept } = await setupAct();
+    const twoBeads = {
+        beads: [
+            {
+                kind: 'choice',
+                idea: 'Der Fehler der Trapezregel haengt von h mit einer festen Potenz ab.',
+                question: 'Was passiert mit C·h^2, wenn du h halbierst?',
+                options: [
+                    { text: 'Der Fehler halbiert sich.', correct: false, why: 'Verwechselt h mit h^2.' },
+                    { text: 'Der Fehler viertelt sich.', correct: true, why: '' },
+                    {
+                        text: 'Der Fehler bleibt gleich.',
+                        correct: false,
+                        why: 'Haelt den Fehler fuer unabhaengig von h.',
+                    },
+                ],
+            },
+            {
+                kind: 'choice',
+                idea: 'Die Ordnung ist die Hochzahl im fuehrenden Fehlerterm.',
+                question: 'Welche Ordnung hat eine Methode mit Fehler D·h^4?',
+                options: [
+                    { text: 'Ordnung 2.', correct: false, why: 'Liest die Zahl der Stuetzstellen statt der Hochzahl.' },
+                    { text: 'Ordnung 4.', correct: true, why: '' },
+                    { text: 'Ordnung 16.', correct: false, why: 'Quadriert die Hochzahl.' },
+                ],
+            },
+        ],
+    };
+
+    const tutor = (lesson: unknown): AiProvider =>
+        createFakeProvider({
+            embeddingDim: 768,
+            embeddings: new Map([[QUERY, embedding(0)]]),
+            structured: (messages) => {
+                const system = messages[0].content;
+                if (system.includes('short interactive lesson')) {
+                    return lesson;
+                }
+                if (system.includes('picked a wrong option')) {
+                    return { text: 'Du hast h mit h^2 verwechselt. Setze h/2 in die Potenz ein.' };
+                }
+                return { score: 0.9, substantive: true, reason: 'stimmt' };
+            },
+        });
+
+    const studySession = async () => {
+        const { concept: goal } = await setupAct();
         const session = await startSession(getDb(), {
             userId: learner,
-            goalConceptId: concept.id,
+            goalConceptId: goal.id,
+            mode: 'study',
+            lectureId: null,
+        });
+        const turn = await nextAct(getDb(), tutor(twoBeads), { sessionId: session.id, userId: learner, query: QUERY });
+        return { goal, session, turn };
+    };
+
+    it('presents the act as one open step when the model cannot plan', async () => {
+        const { concept: goal } = await setupAct();
+        const session = await startSession(getDb(), {
+            userId: learner,
+            goalConceptId: goal.id,
             mode: 'study',
             lectureId: null,
         });
 
         const turn = await nextAct(getDb(), ai(), { sessionId: session.id, userId: learner, query: QUERY });
 
-        const asks = turn.moves.filter((move) => move.kind === 'ask');
-        const last = turn.moves[turn.moves.length - 1];
-        expect(asks).toHaveLength(1);
-        expect(last.kind).toBe('ask');
-        expect(last.kind === 'ask' && last.expects).toBe(script.success.criterion);
+        expect(turn.beads).toHaveLength(1);
+        const bead = turn.beads[0];
+        expect(bead.kind).toBe('open');
+        expect(bead.kind === 'open' && bead.question).toBe(script.steps[2].text);
+        expect(bead.kind === 'open' && bead.expects).toBe(script.success.criterion);
     });
 
-    it('shows the lesson the tutor model writes and stores it on the turn', async () => {
-        const { concept } = await setupAct();
-        const lesson = {
-            moves: [
-                { kind: 'explain', text: 'Du willst die Flaeche unter x^2 naeherungsweise bestimmen.' },
-                {
-                    kind: 'ask',
-                    question: 'Wie gross ist Delta x fuer [0, 4] mit zwei Trapezen?',
-                    hint: 'Breite geteilt durch Anzahl der Teile.',
-                    expects: 'Delta x = 2.',
-                },
-            ],
-        };
-        const tutor: AiProvider = createFakeProvider({
-            embeddingDim: 768,
-            embeddings: new Map([[QUERY, embedding(0)]]),
-            structured: (messages) =>
-                messages[0].content.includes('perform one prepared teaching act')
-                    ? lesson
-                    : { score: 0.9, substantive: true, reason: 'stimmt' },
-        });
-        const session = await startSession(getDb(), {
-            userId: learner,
-            goalConceptId: concept.id,
-            mode: 'study',
-            lectureId: null,
-        });
+    it('stores the planned beads on the turn', async () => {
+        const { turn } = await studySession();
 
-        const turn = await nextAct(getDb(), tutor, { sessionId: session.id, userId: learner, query: QUERY });
-
-        expect(turn.moves).toEqual(lesson.moves);
+        expect(turn.beads).toEqual(twoBeads.beads);
         const stored = await getDb()('turns').where({ id: turn.turnId }).first();
-        expect((stored?.content as { moves: unknown[] }).moves).toHaveLength(2);
+        expect((stored?.content as { beads: unknown[] }).beads).toHaveLength(2);
+    });
+
+    it('repairs a wrong option and only continues on the second attempt', async () => {
+        const { goal, session } = await studySession();
+
+        const wrong = await answerBead(getDb(), tutor(twoBeads), {
+            sessionId: session.id,
+            userId: learner,
+            beadIndex: 0,
+            choice: { optionIndex: 0 },
+        });
+
+        expect(wrong.verdict).toBe('wrong');
+        expect(wrong.repair).toContain('verwechselt');
+        expect(wrong.nextBeadIndex).toBeNull();
+        expect(wrong.done).toBe(false);
+        expect(await getDb()('learner_evidence').where({ concept_id: goal.id })).toHaveLength(0);
+
+        const second = await answerBead(getDb(), tutor(twoBeads), {
+            sessionId: session.id,
+            userId: learner,
+            beadIndex: 0,
+            choice: { optionIndex: 1 },
+        });
+
+        expect(second.verdict).toBe('correct');
+        expect(second.nextBeadIndex).toBe(1);
+        const evidence = await getDb()('learner_evidence').where({ concept_id: goal.id });
+        expect(evidence).toHaveLength(1);
+        expect(Number(evidence[0].outcome)).toBeCloseTo(0.6);
+    });
+
+    it('reveals the right option after two wrong attempts and goes on', async () => {
+        const { goal, session } = await studySession();
+
+        await answerBead(getDb(), tutor(twoBeads), {
+            sessionId: session.id,
+            userId: learner,
+            beadIndex: 0,
+            choice: { optionIndex: 0 },
+        });
+        const second = await answerBead(getDb(), tutor(twoBeads), {
+            sessionId: session.id,
+            userId: learner,
+            beadIndex: 0,
+            choice: { optionIndex: 2 },
+        });
+
+        expect(second.verdict).toBe('wrong');
+        expect(second.repair).toBeNull();
+        expect(second.revealOption).toBe(1);
+        expect(second.nextBeadIndex).toBe(1);
+        const evidence = await getDb()('learner_evidence').where({ concept_id: goal.id });
+        expect(Number(evidence[0].outcome)).toBeCloseTo(0.15);
+    });
+
+    it('finishes after the last bead', async () => {
+        const { session } = await studySession();
+
+        await answerBead(getDb(), tutor(twoBeads), {
+            sessionId: session.id,
+            userId: learner,
+            beadIndex: 0,
+            choice: { optionIndex: 1 },
+        });
+        const last = await answerBead(getDb(), tutor(twoBeads), {
+            sessionId: session.id,
+            userId: learner,
+            beadIndex: 1,
+            choice: { optionIndex: 1 },
+        });
+
+        expect(last.done).toBe(true);
+        expect(last.verdict).toBe('correct');
     });
 
     it('leaves learner state untouched in a rehearsal', async () => {
@@ -249,10 +359,11 @@ describe('session loop', () => {
         });
         await nextAct(getDb(), ai(), { sessionId: session.id, userId: learner, query: QUERY });
 
-        const result = await respondToAct(getDb(), ai(1), {
+        const result = await answerBead(getDb(), ai(1), {
             sessionId: session.id,
             userId: learner,
-            answer: '3',
+            beadIndex: 0,
+            open: { answer: '3' },
         });
 
         expect(result.mastery).toBeNull();
@@ -278,14 +389,16 @@ describe('session loop', () => {
         });
         await nextAct(getDb(), ai(), { sessionId: session.id, userId: learner, query: QUERY });
 
-        const result = await respondToAct(getDb(), failing, {
+        const result = await answerBead(getDb(), failing, {
             sessionId: session.id,
             userId: learner,
-            answer: 'keine Ahnung',
+            beadIndex: 0,
+            open: { answer: 'keine Ahnung' },
         });
 
-        expect(result.outcome).toBe(0.5);
-        expect(result.mastery).toBeCloseTo(0.5);
+        expect(result.verdict).toBe('wrong');
+        expect(result.repair).not.toBeNull();
+        expect(result.mastery).toBeNull();
     });
 
     it('refuses to present an act when the goal concept has none', async () => {

@@ -5,84 +5,69 @@ type ActScript = {
     success: { criterion: string };
 };
 
-export const explainMoveSchema = z.object({
-    kind: z.literal('explain'),
-    text: z.string().min(1).max(1200),
+export const optionSchema = z.object({
+    text: z.string().min(1).max(300),
+    correct: z.boolean(),
+    why: z.string().max(300),
 });
 
-export const exampleMoveSchema = z.object({
-    kind: z.literal('example'),
-    title: z.string().min(1).max(120),
-    steps: z.array(z.string().min(1).max(600)).min(1).max(6),
+export const choiceBeadSchema = z.object({
+    kind: z.literal('choice'),
+    idea: z.string().min(1).max(600),
+    question: z.string().min(1).max(400),
+    options: z.array(optionSchema).min(3).max(4),
 });
 
-export const askMoveSchema = z.object({
-    kind: z.literal('ask'),
-    question: z.string().min(1).max(800),
-    hint: z.string().max(400),
+export const openBeadSchema = z.object({
+    kind: z.literal('open'),
+    idea: z.string().min(1).max(600),
+    question: z.string().min(1).max(400),
     expects: z.string().min(1).max(400),
 });
 
-export const feedbackMoveSchema = z.object({
-    kind: z.literal('feedback'),
-    verdict: z.enum(['correct', 'partial', 'incorrect']),
-    text: z.string().min(1).max(1200),
+export const beadSchema = z.discriminatedUnion('kind', [choiceBeadSchema, openBeadSchema]);
+
+export const beadsSchema = z.array(beadSchema).min(1).max(6);
+
+export const lessonSchema = z.object({ beads: beadsSchema });
+
+export const repairSchema = z.object({
+    text: z.string().min(1).max(800),
 });
 
-export const moveSchema = z.discriminatedUnion('kind', [
-    explainMoveSchema,
-    exampleMoveSchema,
-    askMoveSchema,
-    feedbackMoveSchema,
-]);
+export type Option = z.infer<typeof optionSchema>;
+export type ChoiceBead = z.infer<typeof choiceBeadSchema>;
+export type OpenBead = z.infer<typeof openBeadSchema>;
+export type Bead = z.infer<typeof beadSchema>;
+export type Lesson = z.infer<typeof lessonSchema>;
 
-export const movesSchema = z.array(moveSchema).min(1).max(8);
+export const correctOption = (bead: ChoiceBead): number => bead.options.findIndex((option) => option.correct);
 
-export const reactionMovesSchema = z
-    .array(z.union([feedbackMoveSchema, explainMoveSchema]))
-    .min(1)
-    .max(3);
-
-export type Move = z.infer<typeof moveSchema>;
-export type FeedbackMove = z.infer<typeof feedbackMoveSchema>;
-export type AskMove = z.infer<typeof askMoveSchema>;
-
-export const findAsk = (moves: Move[]): AskMove | null => {
-    const ask = moves.find((move) => move.kind === 'ask');
-    return ask ?? null;
+export const creditFor = (input: { correct: boolean; attempts: number; revealed: boolean }): number => {
+    if (input.revealed) {
+        return 0.15;
+    }
+    if (!input.correct) {
+        return 0;
+    }
+    return input.attempts === 1 ? 1 : 0.6;
 };
 
-export const verdictFor = (score: number): FeedbackMove['verdict'] => {
-    if (score >= 0.75) {
-        return 'correct';
-    }
-    return score >= 0.4 ? 'partial' : 'incorrect';
+export const fallbackLesson = (act: { title: string; script: ActScript }): Lesson => {
+    const taught = act.script.steps.filter((step) => step.role !== 'check');
+    const check = act.script.steps.find((step) => step.role === 'check');
+
+    return {
+        beads: [
+            {
+                kind: 'open',
+                idea: taught[0]?.text ?? act.title,
+                question: check?.text ?? act.title,
+                expects: act.script.success.criterion,
+            },
+        ],
+    };
 };
 
-export const fallbackMoves = (act: { title: string; script: ActScript }): Move[] => {
-    const checkIndex = act.script.steps.findIndex((step) => step.role === 'check');
-    const taught = act.script.steps.filter((_, index) => index !== checkIndex);
-    const askSource = act.script.steps[checkIndex] ?? act.script.steps[act.script.steps.length - 1];
-
-    const moves: Move[] = [];
-    const [first, ...rest] = taught;
-    if (first) {
-        moves.push({ kind: 'explain', text: first.text });
-    }
-    if (rest.length > 0) {
-        moves.push({ kind: 'example', title: act.title, steps: rest.slice(0, 6).map((step) => step.text) });
-    }
-    if (askSource) {
-        moves.push({
-            kind: 'ask',
-            question: askSource.text,
-            hint: '',
-            expects: act.script.success.criterion,
-        });
-    }
-    return moves;
-};
-
-export const fallbackReaction = (input: { score: number; reason: string }): Move[] => [
-    { kind: 'feedback', verdict: verdictFor(input.score), text: input.reason },
-];
+export const fallbackRepair = (input: { why: string; idea: string }): string =>
+    input.why.trim().length > 0 ? input.why : input.idea;

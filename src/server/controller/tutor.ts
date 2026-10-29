@@ -1,11 +1,24 @@
 import { z } from 'zod';
-import { movesSchema } from '@/lib/lesson';
+import { beadsSchema } from '@/lib/lesson';
+import { sessionModeSchema } from '@/types/enums';
 import { getAi } from '../ai';
 import { db } from '../db';
-import { sessionModeSchema } from '@/types/enums';
 import { getUserIdFromContext, protectedProcedure } from '../trpcRoot';
 import { diagnose } from '../tutor/diagnose';
-import { closeSession, nextAct, respondToAct, startSession } from '../tutor/session';
+import { answerBead, closeSession, nextAct, startSession } from '../tutor/session';
+
+const beadOutcome = z.object({
+    verdict: z.enum(['correct', 'wrong']),
+    repair: z.string().nullable(),
+    revealOption: z.number().nullable(),
+    revealAnswer: z.string().nullable(),
+    nextBeadIndex: z.number().nullable(),
+    done: z.boolean(),
+    attempts: z.number().int(),
+    mastery: z.number().nullable(),
+});
+
+const answerInput = z.object({ sessionId: z.string().uuid(), beadIndex: z.number().int().min(0).max(5) });
 
 export const start = () =>
     protectedProcedure
@@ -35,7 +48,7 @@ export const next = () =>
                 turnId: z.string(),
                 actId: z.string(),
                 title: z.string(),
-                moves: movesSchema,
+                beads: beadsSchema,
                 retrieval: z.unknown(),
             }),
         )
@@ -47,15 +60,29 @@ export const next = () =>
             }),
         );
 
-export const respond = () =>
+export const answerChoice = () =>
     protectedProcedure
-        .input(z.object({ sessionId: z.string().uuid(), answer: z.string().trim().min(1).max(5000) }))
-        .output(z.object({ outcome: z.number(), mastery: z.number().nullable(), moves: movesSchema }))
+        .input(answerInput.extend({ optionIndex: z.number().int().min(0).max(3) }))
+        .output(beadOutcome)
         .mutation(async ({ ctx, input }) =>
-            respondToAct(db, getAi(), {
+            answerBead(db, getAi(), {
                 sessionId: input.sessionId,
                 userId: getUserIdFromContext(ctx),
-                answer: input.answer,
+                beadIndex: input.beadIndex,
+                choice: { optionIndex: input.optionIndex },
+            }),
+        );
+
+export const answerOpen = () =>
+    protectedProcedure
+        .input(answerInput.extend({ answer: z.string().trim().min(1).max(5000) }))
+        .output(beadOutcome)
+        .mutation(async ({ ctx, input }) =>
+            answerBead(db, getAi(), {
+                sessionId: input.sessionId,
+                userId: getUserIdFromContext(ctx),
+                beadIndex: input.beadIndex,
+                open: { answer: input.answer },
             }),
         );
 
@@ -85,4 +112,4 @@ export const conceptDiagnosis = () =>
         )
         .query(async ({ ctx, input }) => diagnose(db, getUserIdFromContext(ctx), input.conceptId));
 
-export const tutorRouter = { start, next, respond, close, conceptDiagnosis };
+export const tutorRouter = { start, next, answerChoice, answerOpen, close, conceptDiagnosis };

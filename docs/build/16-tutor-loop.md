@@ -43,28 +43,65 @@ Built from `learner_concept_state` and the last three evidence rows for the conc
 
 The agent turn carries a **performance** of the act, not the act itself: an ordered list of typed moves that the tutor writes for this learner (see below). The moves are stored on the turn, so a session replays without calling the model again.
 
-## Performance
+## Beads
 
-Act scripts are notes for the tutor. `setup`, `model`, `fade` and `check` say what the tutor should do — "Begruende die Ordnung zwei ueber den ersten nicht verschwindenden Term der Taylorreihe" is an instruction, not a question a learner can answer. Rendering the steps verbatim put the rubric on the screen, explained nothing, and asked for an answer the learner had no way to give.
+Act scripts are notes for the tutor. `setup`, `model`, `fade` and `check` say what the tutor should do — "Begruende die Ordnung zwei ueber den ersten nicht verschwindenden Term der Taylorreihe" is an instruction, not a question a learner can answer.
 
-So the act is performed. `performAct` (`src/server/tutor/perform.ts`) turns the notes into moves:
+The first attempt rendered the notes verbatim: the rubric on screen, no explanation, an unanswerable question. The second attempt rewrote the act into one explanation plus one open question, which was still wrong for a different reason: a page of text followed by a written answer tests production under load and returns exactly one bit of information, at the very end, when nothing can be repaired any more.
+
+So a lesson is a **chain of beads**. Each bead carries one idea (at most 450 characters) and one check, and the checks are answered one at a time.
+
+| bead     | carries                                                |
+| -------- | ------------------------------------------------------ |
+| anchor   | the concrete situation the learner already understands |
+| idea     | the one causal mechanism — the bead that matters       |
+| example  | the same idea carried out with numbers                 |
+| contrast | the tempting wrong model and why it fails              |
+| transfer | the same idea on new numbers or a neighbouring method  |
+
+The rule that makes this work is local: the check of a bead is answerable from the ideas of this bead and the beads before it, never from later ones. No forward references, no reading comprehension.
 
 ```ts
-{ kind: 'explain'; text }                       prose for the learner
-{ kind: 'example'; title; steps: string[] }     a worked example
-{ kind: 'ask'; question; hint; expects }        the one question, always last
-{ kind: 'feedback'; verdict; text }             the reaction to an answer
+{
+    kind: 'choice';
+    idea;
+    question;
+    options: {
+        text;
+        correct;
+        why;
+    }
+    [];
+}
+{
+    kind: 'open';
+    idea;
+    question;
+    expects;
+}
 ```
 
-`src/lib/lesson.ts` owns the schema (`lessonSchema` requires exactly one `ask`, and it must be last) and the pure fallbacks. The prompt receives the act notes, the concept, the concept's language and the diagnosis, and is told to rewrite, never quote: the first moves establish the situation, the ask must be answerable from what was just said, and the rubric must not appear.
+`src/lib/lesson.ts` holds the schema, the credit function and the pure fallbacks; `src/server/tutor/perform.ts` holds the plan prompt, the repair prompt and the strict checks (exactly one correct option per bead, a named `why` on every wrong option). A bead that fails those checks takes the whole plan back to the fallback rather than teaching a broken step.
 
-Grading stays before the model speaks. `respondToAct` scores the answer against `script.success.criterion` read from the act, then `reactToAnswer` writes feedback plus, below 0.6, one explanation that repairs exactly what the answer got wrong. The model never decides the score, so a fluent answer cannot talk its way to mastery.
+### Answering
 
-The performance call needs a real budget: `effort: 'high'` with 16 000 tokens. At 2 000 the reasoning alone consumed the limit, the client aborted on `finish_reason: length`, and the fallback reproduced the exact symptom the performance layer exists to remove — the act's notes on screen. Anything that wraps `performAct` must keep that headroom.
+`answerBead` grades a choice **without the model**: the option carries `correct`, so the verdict is arithmetic, instant, free and reproducible. Only a wrong pick calls the model — `repairBead` names the misconception and re-explains the same idea in other words. Two attempts per bead, then the correct option is revealed and the lesson moves on.
 
-Both steps fail open: a broken or unreachable provider yields `fallbackMoves` (the act's steps as explain/example plus the `check` step as the ask) or a single feedback move carrying the grader's reason. A learner is never blocked mid-session by the model.
+```
+first try correct   credit 1.0
+second try correct  credit 0.6
+revealed            credit 0.15
+```
 
-What is deliberately not here yet: the tutor does not yet call tools on its own turn by turn (hint on request, figure, step reveal), moves are not streamed, and nothing is cached per act. Those are the next steps, and they need the move protocol to exist first.
+The credit is written as evidence when the bead resolves, so an act yields evidence per bead instead of one verdict at the end, and `misconception` in the diagnosis sees the difference between "needed a hint" and "never got it". Attempts are counted against the lesson presentation (`seq > lessonTurn.seq`), not the session, so a second act starts at attempt one. Answering a resolved bead is refused with `invalidAnswer` rather than recording a second outcome.
+
+The `open` bead exists for two reasons: some acts end in a written transfer answer, and it is the fallback. When planning fails, the lesson is one open bead built from the act's `check` step and `success.criterion`, graded by `gradeAnswer` exactly as before. A model outage degrades the lesson; it never blocks it.
+
+The reaction turns carry `act_id` as well, so the active lesson is found by `jsonb_exists(content, 'beads')` rather than by act alone — otherwise the second answer of a lesson would look for beads on its own feedback turn.
+
+### What is not here yet
+
+The plan is produced in one call per act; nothing is cached, and a full plan costs roughly 30 seconds and 15 k reasoning characters. The next steps, in order: cache plans per act and mastery bucket, let the tutor add a bead mid-lesson when a repair suggests the idea needs a second angle, and only then give the tutor real tools (hint on request, figure, step reveal) instead of a fixed chain.
 
 ## Choosing the goal concept
 

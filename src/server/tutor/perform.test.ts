@@ -5,7 +5,8 @@ import { resolveConcept } from '@/server/concept/resolve';
 import type { Script } from '@/server/templates';
 import { getDb, testUsers } from 'tests/vitest/setupTestcontainer';
 import { describe, expect, it } from 'vitest';
-import { performAct, reactToAnswer } from './perform';
+import type { Bead } from '@/lib/lesson';
+import { planLesson, repairBead } from './perform';
 
 const learner = testUsers.testUser.user_id;
 
@@ -62,56 +63,102 @@ const prepare = async () => {
     };
 };
 
-describe('performAct', () => {
-    it('returns an ask the learner can answer without the tutor notes', async () => {
+const lesson = {
+    beads: [
+        {
+            kind: 'choice',
+            idea: 'Der Fehler der Trapezregel haengt ueber eine feste Potenz von h ab.',
+            question: 'Was passiert mit C·h^2, wenn du h halbierst?',
+            options: [
+                { text: 'Er halbiert sich.', correct: false, why: 'Verwechselt h mit h^2.' },
+                { text: 'Er viertelt sich.', correct: true, why: '' },
+                { text: 'Er bleibt gleich.', correct: false, why: 'Haelt den Fehler fuer unabhaengig von h.' },
+            ],
+        },
+        {
+            kind: 'choice',
+            idea: 'Die Ordnung ist die Hochzahl im fuehrenden Fehlerterm.',
+            question: 'Welche Ordnung hat D·h^4?',
+            options: [
+                { text: 'Ordnung 2.', correct: false, why: 'Liest die Zahl der Stuetzstellen statt der Hochzahl.' },
+                { text: 'Ordnung 4.', correct: true, why: '' },
+                { text: 'Ordnung 16.', correct: false, why: 'Quadriert die Hochzahl.' },
+            ],
+        },
+    ],
+};
+
+describe('planLesson', () => {
+    it('returns the bead chain the model planned', async () => {
         const input = await prepare();
-        const ai = createFakeProvider({
-            structured: () => ({
-                moves: [
-                    { kind: 'explain', text: 'Du hast ein Integral, das du nicht exakt berechnen kannst.' },
-                    {
-                        kind: 'ask',
-                        question: 'Wie gross ist der Naeherungswert fuer x^2 ueber [0, 4] mit zwei Trapezen?',
-                        hint: 'Bestimme zuerst die Schrittweite.',
-                        expects: 'Wert 24 mit Schrittweite 2.',
-                    },
-                ],
-            }),
-        });
+        const ai = createFakeProvider({ structured: () => lesson });
 
-        const moves = await performAct(ai, { ...input, diagnosis });
+        const planned = await planLesson(ai, { ...input, diagnosis });
 
-        const ask = moves[moves.length - 1];
-        expect(moves).toHaveLength(2);
-        expect(ask.kind).toBe('ask');
-        expect(ask.kind === 'ask' && ask.question).toContain('Naeherungswert');
-        expect(ask.kind === 'ask' && ask.question).not.toBe(script.steps[3].text);
+        expect(planned.beads).toEqual(lesson.beads);
     });
 
     it('sends the act notes, the language and the learner state to the model', async () => {
         const input = await prepare();
-        const ai = createFakeProvider({
-            structured: () => ({ moves: [{ kind: 'ask', question: 'Was ist 3?', hint: '', expects: 'Drei.' }] }),
-        });
+        const ai = createFakeProvider({ structured: () => lesson });
 
-        await performAct(ai, { ...input, diagnosis });
+        await planLesson(ai, { ...input, diagnosis });
 
         const prompt = ai.calls[0].map((message) => message.content).join('\n');
         expect(prompt).toContain('mastery 0.40');
         expect(prompt).toContain(`[check] ${script.steps[3].text}`);
         expect(prompt).toContain('repeated mistakes: yes');
+        expect(prompt).toContain('anchor');
+        expect(prompt).toContain('contrast');
         expect(prompt).toContain(input.concept.language);
     });
 
-    it('falls back to the act when the model returns a broken lesson', async () => {
+    it('rejects a bead with two correct options and falls back to the act', async () => {
         const input = await prepare();
-        const ai = createFakeProvider({ structured: () => ({ moves: [{ kind: 'explain', text: 'zu kurz' }] }) });
+        const doubled = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Zwei richtige Optionen sind kein Check.',
+                    question: 'Was ist 1 + 1?',
+                    options: [
+                        { text: '2', correct: true, why: '' },
+                        { text: 'Zwei', correct: true, why: '' },
+                        { text: '3', correct: false, why: 'Falsch gezaehlt.' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => doubled });
 
-        const moves = await performAct(ai, { ...input, diagnosis });
+        const planned = await planLesson(ai, { ...input, diagnosis });
 
-        const ask = moves[moves.length - 1];
-        expect(ask.kind).toBe('ask');
-        expect(ask.kind === 'ask' && ask.expects).toBe(script.success.criterion);
+        expect(planned.beads).toHaveLength(1);
+        expect(planned.beads[0].kind).toBe('open');
+        expect(planned.beads[0].kind === 'open' && planned.beads[0].expects).toBe(script.success.criterion);
+    });
+
+    it('rejects a wrong option without a reason and falls back to the act', async () => {
+        const input = await prepare();
+        const sloppy = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Ohne Begruendung weiss der Tutor nicht, was schiefging.',
+                    question: 'Was ist 1 + 1?',
+                    options: [
+                        { text: '2', correct: true, why: '' },
+                        { text: '3', correct: false, why: '' },
+                        { text: '4', correct: false, why: '' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => sloppy });
+
+        const planned = await planLesson(ai, { ...input, diagnosis });
+
+        expect(planned.beads[0].kind).toBe('open');
     });
 
     it('never lets a provider failure interrupt the lesson', async () => {
@@ -122,52 +169,41 @@ describe('performAct', () => {
             },
         });
 
-        const moves = await performAct(ai, { ...input, diagnosis });
+        const planned = await planLesson(ai, { ...input, diagnosis });
 
-        expect(moves.some((move) => move.kind === 'ask')).toBe(true);
+        expect(planned.beads.length).toBeGreaterThan(0);
+        expect(planned.beads[0].question).toBe(script.steps[3].text);
     });
 });
 
-describe('reactToAnswer', () => {
-    it('repairs a wrong answer with an explanation', async () => {
-        const ai = createFakeProvider({
-            structured: () => ({
-                moves: [
-                    {
-                        kind: 'feedback',
-                        verdict: 'incorrect',
-                        text: 'Die Stuetzstellen stimmen, die Schrittweite nicht.',
-                    },
-                    { kind: 'explain', text: 'Von 0 bis 4 in zwei Teilen ist die Schrittweite 2, nicht 4.' },
-                ],
-            }),
+describe('repairBead', () => {
+    const bead = lesson.beads[0] as Bead;
+
+    it('returns the repair the model wrote', async () => {
+        const ai = createFakeProvider({ structured: () => ({ text: 'Du hast h mit h^2 verwechselt.' }) });
+
+        const text = await repairBead(ai, {
+            bead,
+            chosen: { text: 'Er halbiert sich.', why: 'Verwechselt h mit h^2.' },
+            attempt: 1,
         });
 
-        const moves = await reactToAnswer(ai, {
-            act: { title: 'Trapezregel', script },
-            asked: { question: 'Wie gross ist der Naeherungswert?', expects: script.success.criterion },
-            answer: 'Delta x = 4, also 32',
-            grade: { score: 0.2, reason: 'Schrittweite falsch', substantive: true },
-        });
-
-        expect(moves[0].kind).toBe('feedback');
-        expect(moves.some((move) => move.kind === 'explain')).toBe(true);
+        expect(text).toBe('Du hast h mit h^2 verwechselt.');
     });
 
-    it('falls back to the grading reason when the model fails', async () => {
+    it('falls back to the misconception when the model fails', async () => {
         const ai = createFakeProvider({
             structured: () => {
                 throw new Error('provider down');
             },
         });
 
-        const moves = await reactToAnswer(ai, {
-            act: { title: 'Trapezregel', script },
-            asked: { question: 'Wie gross ist der Naeherungswert?', expects: script.success.criterion },
-            answer: '24',
-            grade: { score: 0.9, reason: 'Wert und Weg stimmen', substantive: true },
+        const text = await repairBead(ai, {
+            bead,
+            chosen: { text: 'Er halbiert sich.', why: 'Verwechselt h mit h^2.' },
+            attempt: 1,
         });
 
-        expect(moves).toEqual([{ kind: 'feedback', verdict: 'correct', text: 'Wert und Weg stimmen' }]);
+        expect(text).toBe('Verwechselt h mit h^2.');
     });
 });
