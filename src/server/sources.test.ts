@@ -1,4 +1,5 @@
 import { sourceKindSchema } from '@/types/enums';
+import { constraintEnumValues } from 'tests/vitest/enumConstraint';
 import { getDb, testUsers } from 'tests/vitest/setupTestcontainer';
 import { describe, expect, it } from 'vitest';
 
@@ -59,13 +60,7 @@ describe('sources schema', () => {
     });
 
     it('keeps the zod kinds in sync with the database check constraint', async () => {
-        const result = await getDb().raw(
-            `SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conname = 'sources_kind_check'`,
-        );
-        const definition: string = result.rows[0].definition;
-        const allowed = [...definition.matchAll(/'([a-z_]+)'/g)].map((match) => match[1]).sort();
-
-        expect(allowed).toEqual([...sourceKindSchema.options].sort());
+        expect(await constraintEnumValues('sources', 'kind')).toEqual([...sourceKindSchema.options].sort());
     });
 
     it('cascades sections when a source is deleted and refuses duplicate positions', async () => {

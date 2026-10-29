@@ -37,7 +37,7 @@ CREATE TABLE templates (
 CREATE UNIQUE INDEX idx_templates_active_key ON templates (key) WHERE status = 'active';
 ```
 
-`trigger` is what the selection step in chunk 15 matches against a diagnosis; `brief_fields` names the brief fields the template cannot work without; `rubric` is the checklist the review surface shows the creator, one line per item, so acceptance is a judgement against stated criteria rather than taste.
+`trigger` is what the selection step in chunk 15 matches against a diagnosis; `brief_fields` names the brief fields the template cannot work without. `rubric` holds **stable criterion codes**, not prose (`grounded-in-source`, `cases-differ-in-one-feature`, …). The review surface maps those codes to English and German labels from the i18n catalogue, because `i18nScan.test.ts` would otherwise be satisfied by a German UI rendering English database strings. Same reason the template's display name is translated in the UI while `name` here is the canonical English one used in prompts and logs.
 
 ## Seed rows
 
@@ -92,11 +92,23 @@ Drop `templates`. Acts do not exist yet at this point.
 
 ## Acceptance
 
-- [ ] Migration up/down/up succeeds; five rows present with `status='active'`.
-- [ ] `npm run db:types:update` adds `Templates`.
-- [ ] Registry drift test fails if a row is added without a definition or vice versa.
-- [ ] Each zod schema rejects a script with a missing `success.criterion` and a script with more than 8 steps.
-- [ ] A second row with the same `key` and `status='active'` is rejected by the partial unique index.
+- [x] Migration up/down/up succeeds; five rows present with `status='active'`.
+- [x] `npm run db:types:update` adds `Templates`.
+- [x] Registry drift test fails if a row is added without a definition or vice versa.
+- [x] Each zod schema rejects a script with a missing `success.criterion` and a script with more than 8 steps.
+- [x] A second row with the same `key` and `status='active'` is rejected by the partial unique index.
+
+## State after execution
+
+Files: `migrations/20261029000003_templates.js` (table plus five seed rows with fixed ids `00000000-0000-4000-8000-00000000000N`), `src/server/templates/{types,script,workedExample,selfExplanation,contrastingCases,predictObserveExplain,retrievalPractice,index}.ts`, `src/server/templates/templates.test.ts` (8 tests), `templateStatusSchema` in `src/types/enums.ts`, `templates` in `TABLES`.
+
+`tests/vitest/enumConstraint.ts` now holds `constraintEnumValues(table, column)`, reading `pg_get_constraintdef` for `${table}_${column}_check`. Two enums use it already (`sources.kind`, `templates.status`); every later CHECK constraint should reuse it rather than copy the query.
+
+Registry shape: `templateDefinitions` is the authority in code, `templateId(key, version)` builds `key@version`, and `getTemplateDefinition` / `getActiveDefinition` look it up. The drift test compares code against `status='active'` rows in both directions and also compares `name`, so a rename on one side fails.
+
+Script shape: `baseScriptSchema` is `{ steps[3..8] of {role, text}, success: { criterion } }` with `text ≤ 1200` and `criterion ≤ 400` characters. `scriptSchemaWithRoles([...])` narrows the role union per template. Verified behaviour: missing success → reject, 1 step → reject, 9 steps → reject, `observe` on `worked-example` → reject.
+
+Domain note worth recording: the five templates were written for a numerics corpus without special-casing. `predict-observe-explain` is the one whose trigger the corpus has to earn — it fires only when a consequence is _observable_, and in numerics that means an error curve, a convergence table or a blow-up, not a proof. If chunk 17 shows it never fires, it is retired by inserting a later version, not by deleting the row.
 
 ## Anti-goals
 

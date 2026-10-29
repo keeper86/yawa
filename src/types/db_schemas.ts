@@ -10,6 +10,7 @@ export enum Table {
     PersonalAccessTokensLogs = 'personal_access_tokens_logs',
     SourceSections = 'source_sections',
     Sources = 'sources',
+    Templates = 'templates',
     UserData = 'user_data',
 }
 
@@ -22,6 +23,7 @@ export type Tables = {
     personal_access_tokens_logs: PersonalAccessTokensLogs;
     source_sections: SourceSections;
     sources: Sources;
+    templates: Templates;
     user_data: UserData;
 };
 
@@ -99,6 +101,19 @@ export type Sources = {
     license_url: string | null;
     source_revision: string | null;
     fetched_at: Date | null;
+    created_at: Date;
+};
+
+export type Templates = {
+    id: string;
+    key: string;
+    version: number;
+    name: string;
+    intent: string;
+    trigger: string;
+    brief_fields: string[];
+    rubric: string[];
+    status: string;
     created_at: Date;
 };
 

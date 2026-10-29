@@ -68,7 +68,7 @@ Two rules the code enforces that the schema cannot:
 - a title whose slug is empty throws instead of inserting a row with `slug = ''`;
 - the QID is attached with `WHERE wikidata_qid IS NULL`, so an existing QID is never overwritten.
 
-Deviations: the doc listed `slug` rules without saying where the helper lives. It is `src/lib/slug.ts`, a pure function, because chunk 13 and chunk 14 both need to slugify titles before they reach the database.
+Deviations: the doc listed `slug` rules without saying where the helper lives. It is `src/lib/slug.ts` (with `foldText` in `src/lib/text.ts`), pure functions, because chunk 13 and chunk 14 both need to fold and slugify titles before they reach the database. `src/server/controller/message.ts` was refactored to use `foldText` instead of its private `normalizeSearchText`, which was the same function with a different name.
 
 Deliberate omission: `resolveConcept` throws a plain `Error` for an unusable title. Mapping it to a domain error belongs to the controller chunk, where the error catalogue is extended.
 

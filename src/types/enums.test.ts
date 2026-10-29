@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sourceKindSchema } from './enums';
+import { sourceKindSchema, templateStatusSchema } from './enums';
 
 describe('enum schemas', () => {
     it('accepts every source kind the database allows', () => {
@@ -12,5 +12,11 @@ describe('enum schemas', () => {
         expect(sourceKindSchema.safeParse('pdf').success).toBe(false);
         expect(sourceKindSchema.safeParse('').success).toBe(false);
         expect(sourceKindSchema.safeParse(undefined).success).toBe(false);
+    });
+
+    it('accepts the two template statuses and nothing else', () => {
+        expect(templateStatusSchema.safeParse('active').success).toBe(true);
+        expect(templateStatusSchema.safeParse('retired').success).toBe(true);
+        expect(templateStatusSchema.safeParse('draft').success).toBe(false);
     });
 });

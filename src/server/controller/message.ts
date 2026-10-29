@@ -1,3 +1,4 @@
+import { foldText } from '@/lib/text';
 import type { Messages } from '@/types/db_schemas';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -12,13 +13,6 @@ const MESSAGE_SEND_WINDOW_MS = 60_000;
 const REACHABLE_RECIPIENT_SQL = '(display_name IS NOT NULL OR username IS NOT NULL)';
 
 const messageSendTimestamps = new Map<string, number[]>();
-
-const normalizeSearchText = (value: string): string =>
-    value
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
-        .toLowerCase()
-        .trim();
 
 const escapeLikePattern = (value: string): string => value.replace(/([\\%_])/g, '\\$1');
 
@@ -153,7 +147,7 @@ export const listRecipients = () => {
         )
         .query(async ({ input, ctx }) => {
             const userId = getUserIdFromContext(ctx);
-            const query = normalizeSearchText(input.search);
+            const query = foldText(input.search);
             const fields = ['user_id', 'display_name', 'username'] as const;
 
             let rows: RecipientRow[];
