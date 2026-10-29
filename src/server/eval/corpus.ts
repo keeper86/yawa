@@ -35,15 +35,19 @@ export type SeedResult = {
     sections: number;
 };
 
+export type SeedOptions = {
+    ownerUserId: string;
+    corpus?: Corpus;
+    actStatus?: 'proposed' | 'accepted';
+    publish?: boolean;
+};
+
 export const loadCorpus = (): Corpus =>
     JSON.parse(readFileSync(join(process.cwd(), 'seeds/data/golden_corpus.json'), 'utf8')) as Corpus;
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
-export const seedCorpus = async (
-    db: Knex<Tables>,
-    options: { ownerUserId: string; corpus?: Corpus },
-): Promise<SeedResult> => {
+export const seedCorpus = async (db: Knex<Tables>, options: SeedOptions): Promise<SeedResult> => {
     const corpus = options.corpus ?? loadCorpus();
 
     const [source] = await db('sources')
@@ -145,8 +149,8 @@ export const seedCorpus = async (
                 template_version: template.version,
                 owner_user_id: options.ownerUserId,
                 origin: 'authored',
-                status: 'accepted',
-                published_at: new Date(),
+                status: options.actStatus ?? 'accepted',
+                published_at: options.publish === false ? null : new Date(),
                 title: entry.title,
                 script,
                 script_text: text,

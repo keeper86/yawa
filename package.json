@@ -25,6 +25,7 @@
         "db:migrate:latest": "npx knex migrate:latest",
         "db:migrate:rollback": "npx knex migrate:rollback",
         "db:seed": "knex seed:run --env development",
+        "db:seed:corpus": "NODE_ENV=development tsx tools/seed_corpus.ts",
         "db:types:check": "node ./tools/db_types.cjs check",
         "db:types:update": "node ./tools/db_types.cjs update",
         "i18n:scan": "node ./tools/i18n_scan.cjs && node ./tools/i18n_scan_literals.cjs",
