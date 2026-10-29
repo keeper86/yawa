@@ -82,6 +82,8 @@ Verified: migration up → down → up; indexes present (`idx_sources_shared_ext
 
 Deviations from the plan: none, except that the doc's DDL sketch had an index on `source_sections (source_id, position)` in addition to the unique constraint on the same columns, which is the same index twice. Only the constraint was created.
 
+Added after review: `src/types/enums.ts` holds `sourceKindSchema` and its type, since the generated `Sources.kind` is only `string`. `src/server/sources.test.ts` compares those zod options against `pg_get_constraintdef('sources_kind_check')`, so a new kind added to one side and not the other fails the suite. `tests/vitest/setupTestcontainer.ts` now types its instance as `Knex<Tables>`, which is what let `resolveConcept` take a typed handle.
+
 Note for later chunks: `npx knex migrate:down <file>` is the way to test a single migration's `down`. `knex migrate:rollback` rolls back the entire last batch, which on this database contains migrations that already shipped.
 
 ## Anti-goals

@@ -1,3 +1,4 @@
+import { sourceKindSchema } from '@/types/enums';
 import { getDb, testUsers } from 'tests/vitest/setupTestcontainer';
 import { describe, expect, it } from 'vitest';
 
@@ -55,6 +56,16 @@ describe('sources schema', () => {
 
     it('rejects an unknown source kind', async () => {
         await expect(insertSource({ kind: 'pdf' })).rejects.toMatchObject({ code: '23514' });
+    });
+
+    it('keeps the zod kinds in sync with the database check constraint', async () => {
+        const result = await getDb().raw(
+            `SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conname = 'sources_kind_check'`,
+        );
+        const definition: string = result.rows[0].definition;
+        const allowed = [...definition.matchAll(/'([a-z_]+)'/g)].map((match) => match[1]).sort();
+
+        expect(allowed).toEqual([...sourceKindSchema.options].sort());
     });
 
     it('cascades sections when a source is deleted and refuses duplicate positions', async () => {

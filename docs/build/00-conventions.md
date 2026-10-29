@@ -51,7 +51,8 @@ The creator's only action is **accept** or **reject**. There is no accept-and-ed
 - Domain errors: `domainError(code, domainCode, message, params)` plus a `DOMAIN_ERROR_CODES` entry plus English and German strings.
 - `src/types/db_schemas.ts` is generated (`npm run db:types:update`).
 - Server integration tests live beside controllers as `*.test.ts` and run against a testcontainer; unit tests run in jsdom.
-- Migrations are replaceable during development. Fix in place and re-run; no compensating migrations before the first deployment. Test a single `down` with `npx knex migrate:down <file>` — `knex migrate:rollback` takes the whole batch down, including migrations that already shipped.
+- Migrations are replaceable during development. Fix in place and re-run; no compensating migrations before the first deployment. Test a single `down` with `npx knex migrate:down <file>` — `knex migrate:rollback` takes the whole batch down, including migrations that already shipped. The one deployment is a demo that will be torn down, so this applies to every migration in the repository, not only the newest one.
+- Every enum enforced by a CHECK constraint has a zod counterpart in `src/types/enums.ts`, because generated types only ever see `string`. A server test compares the zod options against `pg_get_constraintdef` so the two cannot drift apart.
 - Verify with `npm run test:all`. Never `npm run build`.
 
 ## How to adapt a chunk

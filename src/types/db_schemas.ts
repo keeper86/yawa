@@ -2,6 +2,7 @@
 // Do not touch them, or risk, your modifications being lost.
 
 export enum Table {
+    Concepts = 'concepts',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
     Messages = 'messages',
@@ -13,6 +14,7 @@ export enum Table {
 }
 
 export type Tables = {
+    concepts: Concepts;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
     messages: Messages;
@@ -21,6 +23,17 @@ export type Tables = {
     source_sections: SourceSections;
     sources: Sources;
     user_data: UserData;
+};
+
+export type Concepts = {
+    id: string;
+    slug: string;
+    title: string;
+    language: string;
+    summary: string | null;
+    wikidata_qid: string | null;
+    created_by_user_id: string | null;
+    created_at: Date;
 };
 
 export type KnexMigrations = {

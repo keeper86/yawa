@@ -52,9 +52,27 @@ Drop `concepts`. Nothing references it yet at this point.
 
 ## Acceptance
 
-- [ ] Migration up/down/up succeeds; `npm run db:types:update` adds `Concepts`.
-- [ ] `slugify` unit tests cover umlauts, existing hyphens, punctuation, digits, empty input and the 120-character cap.
-- [ ] A server test asserts: same title twice → one row; same title in two languages → two rows; same `wikidata_qid` with a different title → reuse and no second row.
+- [x] Migration up/down/up succeeds; `npm run db:types:update` adds `Concepts` (+13 lines).
+- [x] `slugify` unit tests cover umlauts, eszett, existing hyphens, punctuation, digits, empty input and the 120-character cap.
+- [x] A server test asserts: same title twice → one row; same title in two languages → two rows; same `wikidata_qid` with a different title → reuse and no second row.
+- [x] A concept with no acts is valid — nothing references concepts yet, so it is structural rather than tested.
+
+## State after execution
+
+Files: `migrations/20261029000002_concepts.js`, `src/lib/slug.ts`, `src/lib/slug.test.ts` (6 tests), `src/server/concept/resolve.ts`, `src/server/concept/resolve.test.ts` (6 tests), `concepts` added to `TABLES` in `src/server/db.test.ts`.
+
+`resolveConcept(db, candidate)` is the create-or-get path. It looks up by `wikidata_qid` first, then by `(language, slug)`, then inserts; a unique violation from a concurrent insert is caught and re-read, so two parallel calls for the same title return one row (tested with `Promise.all`). A concept created without a QID gets it attached when a later call supplies one.
+
+Two rules the code enforces that the schema cannot:
+
+- a title whose slug is empty throws instead of inserting a row with `slug = ''`;
+- the QID is attached with `WHERE wikidata_qid IS NULL`, so an existing QID is never overwritten.
+
+Deviations: the doc listed `slug` rules without saying where the helper lives. It is `src/lib/slug.ts`, a pure function, because chunk 13 and chunk 14 both need to slugify titles before they reach the database.
+
+Deliberate omission: `resolveConcept` throws a plain `Error` for an unusable title. Mapping it to a domain error belongs to the controller chunk, where the error catalogue is extended.
+
+Observation for later: `src/server/controller/message.ts` already has a private `normalizeSearchText` doing the same NFD-and-strip-diacritics step. It should use a shared helper, but not in this chunk.
 
 ## Anti-goals
 
