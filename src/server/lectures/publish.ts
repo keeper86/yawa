@@ -23,10 +23,6 @@ export const publishLecture = async (db: Knex<Tables>, input: PublishLectureInpu
         if (lecture.owner_user_id !== input.userId) {
             throw new DomainFailure('notOwner', 'Only the owner can publish a lecture');
         }
-        if (lecture.published_at !== null) {
-            return lecture;
-        }
-
         const parsed = briefSchema.safeParse(lecture.brief);
         if (!parsed.success) {
             const fields = parsed.error.issues.map((issue) => issue.path.join('.')).join(', ');
@@ -73,14 +69,14 @@ export const publishLecture = async (db: Knex<Tables>, input: PublishLectureInpu
         await trx('acts')
             .whereIn('id', actIds)
             .update({
-                published_at: now,
+                published_at: trx.raw('COALESCE(published_at, ?)', [now]),
                 reviewed_at: trx.raw('COALESCE(reviewed_at, ?)', [now]),
                 reviewed_by_user_id: trx.raw('COALESCE(reviewed_by_user_id, ?)', [input.userId]),
             });
 
         const [published] = await trx('lectures')
             .where({ id: input.lectureId })
-            .update({ published_at: now, updated_at: now })
+            .update({ published_at: trx.raw('COALESCE(published_at, ?)', [now]), updated_at: now })
             .returning('*');
 
         return published;

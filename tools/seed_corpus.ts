@@ -84,15 +84,14 @@ const run = async () => {
         }
     }
 
-    const reset = await database('acts')
-        .whereIn(
-            'id',
-            acts.map((act) => act.id),
-        )
-        .whereNot({ status: 'proposed' })
-        .update({ status: 'proposed', published_at: null });
-    if (reset > 0) {
-        console.log(`Reset ${reset} corpus acts to proposed so the review queue has work.`);
+    if (process.argv.includes('--reset')) {
+        const reset = await database('acts')
+            .whereIn(
+                'id',
+                acts.map((act) => act.id),
+            )
+            .update({ status: 'proposed', published_at: null });
+        console.log(`--reset: ${reset} corpus acts set back to proposed and unpublished.`);
     }
 
     const existingLinks = await database('lecture_acts').where({ lecture_id: lecture.id }).pluck('act_id');

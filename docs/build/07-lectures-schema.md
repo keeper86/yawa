@@ -91,6 +91,18 @@ Unpublishing is refused in the MVP. Withdrawing content is a moderation concern 
 
 The lecture does **not** gate retrieval. The tutoring agent selects acts by concept, not by lecture (invariant 7 and chunk 15). A lecture is what a human browses, curates, reviews and shares; it is also the source of the acts the agent may serve, because only published acts are visible. Keeping those two roles separate is the reason this table has no role in the query path of chunk 15.
 
+## Publishing is additive
+
+Publishing a lecture again does not replace (there is nothing to replace). It stamps `published_at` on every act of the lecture that does not have one yet, and leaves the lecture's own `published_at` at its first value:
+
+```sql
+published_at = COALESCE(published_at, $now)
+```
+
+The first version returned early when the lecture was already published. That made extended lectures unpublishable: acts accepted after the first publication kept `published_at = NULL` forever, and the tutor — which only serves published acts — could not find them. A test now publishes, adds another accepted act, and publishes again.
+
+Validation still covers the whole lecture, so adding a draft act to a published lecture makes the next publish fail until that act is reviewed. That is the intended pressure: nothing reaches a learner because it happened to be attached to something already published.
+
 ## Down migration
 
 Drop `lecture_acts`, `lecture_sources`, `lecture_concepts`, `lectures`.

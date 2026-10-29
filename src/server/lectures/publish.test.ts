@@ -214,6 +214,22 @@ describe('publishLecture', () => {
         expect(second.published_at).toEqual(first.published_at);
     });
 
+    it('publishes acts that were added after the lecture was published', async () => {
+        const concept = await createConcept('Trapezregel K');
+        const lecture = await createLecture([concept]);
+        const first = await addAct(lecture.id, concept.id, { status: 'accepted', position: 1, grounded: true });
+        await publishLecture(getDb(), { lectureId: lecture.id, userId: owner });
+
+        const second = await addAct(lecture.id, concept.id, { status: 'accepted', position: 2, grounded: true });
+        const republished = await publishLecture(getDb(), { lectureId: lecture.id, userId: owner });
+
+        const firstStored = await getDb()('acts').where({ id: first.id }).first();
+        const secondStored = await getDb()('acts').where({ id: second.id }).first();
+        expect(firstStored?.published_at).not.toBeNull();
+        expect(secondStored?.published_at).not.toBeNull();
+        expect(republished.published_at).not.toBeNull();
+    });
+
     it('leaves the acts alone when the lecture is deleted', async () => {
         const concept = await createConcept('Trapezregel J');
         const lecture = await createLecture([concept]);
