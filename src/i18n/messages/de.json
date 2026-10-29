@@ -423,7 +423,12 @@
         "result": "Ergebnis",
         "score": "Bewertung",
         "mastery": "Wissensstand jetzt",
-        "criterion": "Erfolgskriterium",
+        "hint": "Hinweis",
+        "verdict": {
+            "correct": "Richtig",
+            "partial": "Teilweise richtig",
+            "incorrect": "Noch nicht"
+        },
         "whyTitle": "Warum dieser Akt",
         "whyHop": "Abstand zum Ziel",
         "whyVia": "Gefunden ueber",

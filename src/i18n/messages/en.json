@@ -423,7 +423,12 @@
         "result": "Result",
         "score": "Score",
         "mastery": "Mastery now",
-        "criterion": "Success criterion",
+        "hint": "Hint",
+        "verdict": {
+            "correct": "Correct",
+            "partial": "Partly right",
+            "incorrect": "Not there yet"
+        },
         "whyTitle": "Why this act",
         "whyHop": "Distance to the goal",
         "whyVia": "Found through",

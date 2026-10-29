@@ -185,6 +185,59 @@ describe('session loop', () => {
         expect(evidence[0].kind).toBe('answer');
     });
 
+    it('presents the act as a lesson that ends in one answerable question', async () => {
+        const { concept } = await setupAct();
+        const session = await startSession(getDb(), {
+            userId: learner,
+            goalConceptId: concept.id,
+            mode: 'study',
+            lectureId: null,
+        });
+
+        const turn = await nextAct(getDb(), ai(), { sessionId: session.id, userId: learner, query: QUERY });
+
+        const asks = turn.moves.filter((move) => move.kind === 'ask');
+        const last = turn.moves[turn.moves.length - 1];
+        expect(asks).toHaveLength(1);
+        expect(last.kind).toBe('ask');
+        expect(last.kind === 'ask' && last.expects).toBe(script.success.criterion);
+    });
+
+    it('shows the lesson the tutor model writes and stores it on the turn', async () => {
+        const { concept } = await setupAct();
+        const lesson = {
+            moves: [
+                { kind: 'explain', text: 'Du willst die Flaeche unter x^2 naeherungsweise bestimmen.' },
+                {
+                    kind: 'ask',
+                    question: 'Wie gross ist Delta x fuer [0, 4] mit zwei Trapezen?',
+                    hint: 'Breite geteilt durch Anzahl der Teile.',
+                    expects: 'Delta x = 2.',
+                },
+            ],
+        };
+        const tutor: AiProvider = createFakeProvider({
+            embeddingDim: 768,
+            embeddings: new Map([[QUERY, embedding(0)]]),
+            structured: (messages) =>
+                messages[0].content.includes('perform one prepared teaching act')
+                    ? lesson
+                    : { score: 0.9, substantive: true, reason: 'stimmt' },
+        });
+        const session = await startSession(getDb(), {
+            userId: learner,
+            goalConceptId: concept.id,
+            mode: 'study',
+            lectureId: null,
+        });
+
+        const turn = await nextAct(getDb(), tutor, { sessionId: session.id, userId: learner, query: QUERY });
+
+        expect(turn.moves).toEqual(lesson.moves);
+        const stored = await getDb()('turns').where({ id: turn.turnId }).first();
+        expect((stored?.content as { moves: unknown[] }).moves).toHaveLength(2);
+    });
+
     it('leaves learner state untouched in a rehearsal', async () => {
         const { concept } = await setupAct();
         const lecture = await createLecture();

@@ -6,13 +6,57 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCloseSession, useNextAct, useRespondToAct, useStartSession } from '@/hooks/useTutor';
 import { useErrorMessage } from '@/i18n/errors';
+import type { Move } from '@/lib/lesson';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-type Script = { steps: { role: string; text: string }[]; success: { criterion: string } };
-type Turn = { turnId: string; actId: string; title: string; script: Script; retrieval?: unknown };
-type Result = { outcome: number; mastery: number | null };
+type Turn = { turnId: string; actId: string; title: string; moves: Move[]; retrieval?: unknown };
+type Result = { outcome: number; mastery: number | null; moves: Move[] };
+
+const LessonMove = ({ move }: { move: Move }) => {
+    const t = useTranslations('Tutor');
+
+    if (move.kind === 'explain') {
+        return <p className='text-sm leading-relaxed whitespace-pre-line'>{move.text}</p>;
+    }
+
+    if (move.kind === 'example') {
+        return (
+            <div className='rounded-md border p-3'>
+                <p className='pb-2 text-sm font-medium'>{move.title}</p>
+                <ol className='list-decimal space-y-1 pl-5 text-sm leading-relaxed'>
+                    {move.steps.map((step) => (
+                        <li key={step}>{step}</li>
+                    ))}
+                </ol>
+            </div>
+        );
+    }
+
+    if (move.kind === 'ask') {
+        return (
+            <div className='space-y-2'>
+                <p className='text-sm font-medium leading-relaxed'>{move.question}</p>
+                {move.hint.trim().length === 0 ? null : (
+                    <details className='text-xs text-muted-foreground'>
+                        <summary className='cursor-pointer'>{t('hint')}</summary>
+                        <p className='pt-1 text-sm'>{move.hint}</p>
+                    </details>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className='space-y-2 rounded-md border p-3'>
+            <Badge variant={move.verdict === 'incorrect' ? 'destructive' : 'secondary'}>
+                {t(`verdict.${move.verdict}`)}
+            </Badge>
+            <p className='text-sm leading-relaxed'>{move.text}</p>
+        </div>
+    );
+};
 
 const readWhy = (retrieval: unknown) => {
     if (typeof retrieval !== 'object' || retrieval === null) {
@@ -138,28 +182,20 @@ export default function TutorPage() {
             {turn ? (
                 <div className='grid gap-4 lg:grid-cols-[2fr_1fr]'>
                     <Card>
-                        <CardHeader>
-                            <CardTitle>{turn.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className='space-y-3'>
-                            {turn.script.steps.map((step, index) => (
-                                <div key={`${turn.turnId}-${index}`} className='flex gap-3'>
-                                    <Badge className='h-fit shrink-0 font-mono text-xs' variant='outline'>
-                                        {step.role}
-                                    </Badge>
-                                    <p className='text-sm leading-relaxed'>{step.text}</p>
-                                </div>
+                        <CardContent className='space-y-4 pt-6'>
+                            {turn.moves.map((move, index) => (
+                                <LessonMove key={`${turn.turnId}-${index}`} move={move} />
                             ))}
-                            <p className='rounded-md bg-muted p-3 text-sm'>{turn.script.success.criterion}</p>
                         </CardContent>
                     </Card>
 
                     <div className='space-y-4'>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className='text-base'>{t('whyTitle')}</CardTitle>
-                            </CardHeader>
-                            <CardContent className='space-y-1 text-sm'>
+                        <details className='rounded-md border p-3 text-sm'>
+                            <summary className='cursor-pointer text-muted-foreground'>{t('whyTitle')}</summary>
+                            <div className='space-y-1 pt-2'>
+                                <p>
+                                    {t('whyGoal')}: {turn.title}
+                                </p>
                                 <p>
                                     {t('whyHop')}: {why?.hop ?? '–'}
                                 </p>
@@ -174,8 +210,8 @@ export default function TutorPage() {
                                 <p>
                                     {t('whyScore')}: {why?.score === null ? '–' : why?.score.toFixed(4)}
                                 </p>
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </details>
 
                         {result === null ? (
                             <Card>
@@ -199,15 +235,16 @@ export default function TutorPage() {
                                 <CardHeader>
                                     <CardTitle className='text-base'>{t('result')}</CardTitle>
                                 </CardHeader>
-                                <CardContent className='space-y-2 text-sm'>
-                                    <p>
+                                <CardContent className='space-y-3'>
+                                    {result.moves.map((move, index) => (
+                                        <LessonMove key={`${turn.turnId}-result-${index}`} move={move} />
+                                    ))}
+                                    <p className='text-xs text-muted-foreground'>
                                         {t('score')}: {Math.round(result.outcome * 100)}%
+                                        {result.mastery === null
+                                            ? null
+                                            : ` · ${t('mastery')}: ${Math.round(result.mastery * 100)}%`}
                                     </p>
-                                    {result.mastery === null ? null : (
-                                        <p>
-                                            {t('mastery')}: {Math.round(result.mastery * 100)}%
-                                        </p>
-                                    )}
                                     <Button onClick={advance}>{t('nextAct')}</Button>
                                 </CardContent>
                             </Card>

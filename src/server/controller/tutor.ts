@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { baseScriptSchema } from '../templates';
+import { movesSchema } from '@/lib/lesson';
 import { getAi } from '../ai';
 import { db } from '../db';
 import { sessionModeSchema } from '@/types/enums';
@@ -35,7 +35,7 @@ export const next = () =>
                 turnId: z.string(),
                 actId: z.string(),
                 title: z.string(),
-                script: baseScriptSchema,
+                moves: movesSchema,
                 retrieval: z.unknown(),
             }),
         )
@@ -50,7 +50,7 @@ export const next = () =>
 export const respond = () =>
     protectedProcedure
         .input(z.object({ sessionId: z.string().uuid(), answer: z.string().trim().min(1).max(5000) }))
-        .output(z.object({ outcome: z.number(), mastery: z.number().nullable() }))
+        .output(z.object({ outcome: z.number(), mastery: z.number().nullable(), moves: movesSchema }))
         .mutation(async ({ ctx, input }) =>
             respondToAct(db, getAi(), {
                 sessionId: input.sessionId,

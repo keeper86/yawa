@@ -7,6 +7,8 @@ import { retrieve, topCandidates } from '../retrieval';
 import { diagnose, pickGoalConcept } from './diagnose';
 import { gradeAnswer } from './grade';
 import { updateMastery } from './mastery';
+import { findAsk, type Move } from '@/lib/lesson';
+import { performAct, reactToAnswer } from './perform';
 import type { Script } from '../templates';
 
 export type StartInput = {
@@ -20,8 +22,22 @@ export type NextTurn = {
     turnId: string;
     actId: string;
     title: string;
-    script: Script;
+    moves: Move[];
     retrieval: unknown;
+};
+
+export type RespondResult = {
+    outcome: number;
+    mastery: number | null;
+    moves: Move[];
+};
+
+const readMoves = (content: unknown): Move[] => {
+    if (typeof content !== 'object' || content === null) {
+        return [];
+    }
+    const moves = (content as { moves?: unknown }).moves;
+    return Array.isArray(moves) ? (moves as Move[]) : [];
 };
 
 const loadSession = async (db: Knex<Tables>, sessionId: string, userId: string): Promise<TutorSessions> => {
@@ -87,13 +103,24 @@ export const nextAct = async (
         throw new DomainFailure('actNotFound', 'Act not found');
     }
 
+    const concept = await db('concepts').where({ id: act.concept_id }).first();
+    if (!concept) {
+        throw new DomainFailure('conceptNotFound', 'Concept not found');
+    }
+
+    const moves = await performAct(ai, {
+        act: { id: act.id, title: act.title, script: act.script as Script },
+        concept: { title: concept.title, summary: concept.summary, language: concept.language },
+        diagnosis,
+    });
+
     const [turn] = await db('turns')
         .insert({
             session_id: session.id,
             seq: await nextSeq(db, session.id),
             role: 'agent',
             act_id: act.id,
-            content: { actId: act.id, title: act.title, script: act.script },
+            content: { actId: act.id, title: act.title, moves },
             retrieval: {
                 chosen: chosen.actId,
                 score: chosen.score,
@@ -109,7 +136,7 @@ export const nextAct = async (
         turnId: turn.id,
         actId: act.id,
         title: act.title,
-        script: act.script as Script,
+        moves,
         retrieval: turn.retrieval,
     };
 };
@@ -118,7 +145,7 @@ export const respondToAct = async (
     db: Knex<Tables>,
     ai: AiProvider,
     input: { sessionId: string; userId: string; answer: string },
-): Promise<{ outcome: number; mastery: number | null }> => {
+): Promise<RespondResult> => {
     const session = await loadSession(db, input.sessionId, input.userId);
 
     const presented = await db('turns')
@@ -143,6 +170,17 @@ export const respondToAct = async (
     const script = act.script as Script;
     const grade = await gradeAnswer(ai, { criterion: script.success.criterion, answer: input.answer });
 
+    const asked = findAsk(readMoves(presented.content));
+    const moves = await reactToAnswer(ai, {
+        act: { title: act.title, script },
+        asked: {
+            question: asked?.question ?? script.steps[script.steps.length - 1].text,
+            expects: asked?.expects ?? script.success.criterion,
+        },
+        answer: input.answer,
+        grade,
+    });
+
     const [answerTurn] = await db('turns')
         .insert({
             session_id: session.id,
@@ -158,12 +196,12 @@ export const respondToAct = async (
         seq: await nextSeq(db, session.id),
         role: 'agent',
         act_id: act.id,
-        content: { graded: true, reason: grade.reason, substantive: grade.substantive },
+        content: { graded: true, reason: grade.reason, substantive: grade.substantive, moves },
         outcome: grade.score,
     });
 
     if (session.mode === 'rehearsal') {
-        return { outcome: grade.score, mastery: null };
+        return { outcome: grade.score, mastery: null, moves };
     }
 
     return db.transaction(async (trx) => {
@@ -209,7 +247,7 @@ export const respondToAct = async (
             });
         }
 
-        return { outcome: grade.score, mastery: updated.mastery };
+        return { outcome: grade.score, mastery: updated.mastery, moves };
     });
 };
 

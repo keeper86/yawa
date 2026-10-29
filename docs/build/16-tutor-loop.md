@@ -41,7 +41,30 @@ Built from `learner_concept_state` and the last three evidence rows for the conc
 | `respond(sessionId, answer)`                  | grade against `success.criterion`, extract evidence | learner `turns` row, agent `turns` row with `outcome`, `learner_evidence`, updated `learner_concept_state` |
 | `close(sessionId)`                            | stamp `closed_at`                                   | `tutor_sessions`                                                                                           |
 
-The act's script is rendered into the agent turn as a snapshot — the learner sees the steps, answers, and the next turn reacts. Multi-step scripts are delivered as one agent turn with the steps in order and a single question at the end; this is why scripts are linear and bounded in length.
+The agent turn carries a **performance** of the act, not the act itself: an ordered list of typed moves that the tutor writes for this learner (see below). The moves are stored on the turn, so a session replays without calling the model again.
+
+## Performance
+
+Act scripts are notes for the tutor. `setup`, `model`, `fade` and `check` say what the tutor should do — "Begruende die Ordnung zwei ueber den ersten nicht verschwindenden Term der Taylorreihe" is an instruction, not a question a learner can answer. Rendering the steps verbatim put the rubric on the screen, explained nothing, and asked for an answer the learner had no way to give.
+
+So the act is performed. `performAct` (`src/server/tutor/perform.ts`) turns the notes into moves:
+
+```ts
+{ kind: 'explain'; text }                       prose for the learner
+{ kind: 'example'; title; steps: string[] }     a worked example
+{ kind: 'ask'; question; hint; expects }        the one question, always last
+{ kind: 'feedback'; verdict; text }             the reaction to an answer
+```
+
+`src/lib/lesson.ts` owns the schema (`lessonSchema` requires exactly one `ask`, and it must be last) and the pure fallbacks. The prompt receives the act notes, the concept, the concept's language and the diagnosis, and is told to rewrite, never quote: the first moves establish the situation, the ask must be answerable from what was just said, and the rubric must not appear.
+
+Grading stays before the model speaks. `respondToAct` scores the answer against `script.success.criterion` read from the act, then `reactToAnswer` writes feedback plus, below 0.6, one explanation that repairs exactly what the answer got wrong. The model never decides the score, so a fluent answer cannot talk its way to mastery.
+
+The performance call needs a real budget: `effort: 'high'` with 16 000 tokens. At 2 000 the reasoning alone consumed the limit, the client aborted on `finish_reason: length`, and the fallback reproduced the exact symptom the performance layer exists to remove — the act's notes on screen. Anything that wraps `performAct` must keep that headroom.
+
+Both steps fail open: a broken or unreachable provider yields `fallbackMoves` (the act's steps as explain/example plus the `check` step as the ask) or a single feedback move carrying the grader's reason. A learner is never blocked mid-session by the model.
+
+What is deliberately not here yet: the tutor does not yet call tools on its own turn by turn (hint on request, figure, step reveal), moves are not streamed, and nothing is cached per act. Those are the next steps, and they need the move protocol to exist first.
 
 ## Choosing the goal concept
 
