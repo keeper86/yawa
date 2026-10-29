@@ -68,11 +68,21 @@ Drop `source_sections`, then `sources`. Do not drop the `vector` extension.
 
 ## Acceptance
 
-- [ ] `npm run db:migrate:latest`, `npm run db:migrate:rollback`, `npm run db:migrate:latest` all succeed.
-- [ ] `npm run db:types:update` adds `Sources` and `SourceSections` to `src/types/db_schemas.ts`.
-- [ ] `npm run test:server` is green, proving the migration applies to the testcontainer.
-- [ ] A test asserts the two partial unique indexes exist and behave (insert twice as owner → violation; insert twice as shared → violation; same `external_id` for two different owners → allowed).
-- [ ] Deleting a source removes its sections.
+- [x] `npm run db:migrate:latest`, `npx knex migrate:down 20261029000001_sources.js`, `npm run db:migrate:latest` all succeed.
+- [x] `npm run db:types:update` adds `Sources` and `SourceSections` to `src/types/db_schemas.ts` (+29 lines).
+- [x] `npm run test:server` is green, proving the migration applies to the testcontainer.
+- [x] A test asserts the two partial unique indexes behave (insert twice as owner → violation; insert twice as shared → violation; same `external_id` for two different owners → allowed).
+- [x] Deleting a source removes its sections.
+
+## State after execution
+
+Files: `migrations/20261029000001_sources.js`, `src/server/sources.test.ts` (5 tests), `sources`/`source_sections` added to `TABLES` in `src/server/db.test.ts`.
+
+Verified: migration up → down → up; indexes present (`idx_sources_shared_external`, `idx_sources_owned_external`, `source_sections_source_id_position_key`); constraint behaviour covered by test; `src/types/db_schemas.ts` regenerated.
+
+Deviations from the plan: none, except that the doc's DDL sketch had an index on `source_sections (source_id, position)` in addition to the unique constraint on the same columns, which is the same index twice. Only the constraint was created.
+
+Note for later chunks: `npx knex migrate:down <file>` is the way to test a single migration's `down`. `knex migrate:rollback` rolls back the entire last batch, which on this database contains migrations that already shipped.
 
 ## Anti-goals
 

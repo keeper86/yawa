@@ -7,6 +7,8 @@ export enum Table {
     Messages = 'messages',
     PersonalAccessTokens = 'personal_access_tokens',
     PersonalAccessTokensLogs = 'personal_access_tokens_logs',
+    SourceSections = 'source_sections',
+    Sources = 'sources',
     UserData = 'user_data',
 }
 
@@ -16,6 +18,8 @@ export type Tables = {
     messages: Messages;
     personal_access_tokens: PersonalAccessTokens;
     personal_access_tokens_logs: PersonalAccessTokensLogs;
+    source_sections: SourceSections;
+    sources: Sources;
     user_data: UserData;
 };
 
@@ -58,6 +62,31 @@ export type PersonalAccessTokensLogs = {
     used_at: Date;
     ip: string | null;
     user_agent: string | null;
+};
+
+export type SourceSections = {
+    id: string;
+    source_id: string;
+    position: number;
+    heading: string;
+    anchor: string | null;
+    content: string;
+    content_hash: string;
+};
+
+export type Sources = {
+    id: string;
+    owner_user_id: string | null;
+    kind: string;
+    external_id: string;
+    title: string;
+    language: string;
+    uri: string | null;
+    license: string;
+    license_url: string | null;
+    source_revision: string | null;
+    fetched_at: Date | null;
+    created_at: Date;
 };
 
 export type UserData = {

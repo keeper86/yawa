@@ -21,9 +21,11 @@ src/server/ai/provider.test.ts     unit tests, no network
 ```ts
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
+export type ChatOptions = { maxTokens?: number; temperature?: number; effort?: 'low' | 'high' | 'max' };
+
 export type AiProvider = {
-    chat(messages: ChatMessage[], options?: { maxTokens?: number; temperature?: number }): Promise<string>;
-    chatStructured<T>(messages: ChatMessage[], schema: z.ZodType<T>): Promise<T>;
+    chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>;
+    chatStructured<T>(messages: ChatMessage[], schema: z.ZodType<T>, options?: ChatOptions): Promise<T>;
     embed(texts: string[]): Promise<number[][]>;
     readonly embeddingModel: string;
     readonly embeddingDim: number;
@@ -31,6 +33,16 @@ export type AiProvider = {
 ```
 
 `chatStructured` sends `response_format: { type: 'json_object' }`, parses, validates with zod, and on a validation failure makes **exactly one** repair attempt by appending the zod error to the conversation. A second failure throws `aiInvalidResponse`. Two attempts, never a loop: a model that cannot produce the schema twice will not produce it on the fifth try, and the caller needs a deterministic failure to report to the creator.
+
+## The chat model reasons before it answers
+
+Measured against `deepseek-flash` (DeepSeek-V4.1-Flash, 1 048 576 context, 393 216 max output tokens) during chunk 01:
+
+- Every response carries `reasoning_content` beside `content`. With `max_tokens: 20` the model spent the whole budget thinking and returned `content: ""` with `finish_reason: "length"`. Read `content`; take `reasoning_content` only for its length in logs.
+- **An empty `content` with `finish_reason: 'length'` is a failure, not an empty answer.** `chatStructured` must throw `aiInvalidResponse` before zod ever sees `""`, otherwise the single repair attempt is spent on a request that cannot succeed.
+- Reasoning tokens are billed and counted in `completion_tokens` (387 reasoning characters cost 148 completion tokens on a one-sentence answer). Defaults are `maxTokens: 4096` for generation and `1024` for grading. A 500-token budget is enough to produce silence.
+- `reasoning_effort` accepts `low`, `high` and `max`. Generation uses `high`, grading uses `low`. It is a per-call option rather than an environment variable, because the right level differs between the two calls inside one job.
+- `response_format: { "type": "json_object" }` is supported and returns bare JSON without markdown fences.
 
 ## Implementation rules
 
@@ -68,6 +80,8 @@ Missing configuration throws at construction with the variable name, not a gener
 ## Acceptance
 
 - [ ] Unit tests cover: success, schema violation then repair succeeds, schema violation twice throws `aiInvalidResponse`, 429 then success, 500 three times throws `aiUnavailable`, 400 throws immediately without retry, timeout aborts.
+- [ ] Empty `content` with `finish_reason: 'length'` throws `aiInvalidResponse` and never reaches the schema: a response truncated after reasoning tokens counts as a failure, not as an empty answer.
+- [ ] `reasoning_content` is ignored for content and only its length is logged.
 - [ ] `embed` rejects more than 32 inputs and rejects a vector of the wrong length.
 - [ ] No test performs a network request (`fetch` is stubbed or the fake is used; assert zero calls to global fetch where relevant).
 - [ ] Logging contains no prompt or response body at `info` or above.

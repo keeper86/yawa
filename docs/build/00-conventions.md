@@ -51,7 +51,7 @@ The creator's only action is **accept** or **reject**. There is no accept-and-ed
 - Domain errors: `domainError(code, domainCode, message, params)` plus a `DOMAIN_ERROR_CODES` entry plus English and German strings.
 - `src/types/db_schemas.ts` is generated (`npm run db:types:update`).
 - Server integration tests live beside controllers as `*.test.ts` and run against a testcontainer; unit tests run in jsdom.
-- Migrations are replaceable during development. Fix in place and re-run; no compensating migrations before the first deployment.
+- Migrations are replaceable during development. Fix in place and re-run; no compensating migrations before the first deployment. Test a single `down` with `npx knex migrate:down <file>` — `knex migrate:rollback` takes the whole batch down, including migrations that already shipped.
 - Verify with `npm run test:all`. Never `npm run build`.
 
 ## How to adapt a chunk

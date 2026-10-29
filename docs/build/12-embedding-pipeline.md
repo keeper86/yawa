@@ -41,7 +41,7 @@ export const embedPendingActs = async (
 Rules:
 
 1. **Claim, do not scan.** A transaction selects up to `limit` rows with `FOR UPDATE SKIP LOCKED`, then releases them; the embedding calls happen outside the transaction. Two concurrent requests then never embed the same act, and a long API call never holds row locks.
-2. **Batches of 16.** Ollama's throughput is per-request; larger batches buy little and slow the first progress tick.
+2. **Batches of 8.** Measured in chunk 01: 2.30 sections/s at batch 8, 2.13 at 16, 1.72 at 32 on 4 vCPU. Larger batches are slower per section, not faster.
 3. **Write the model with the vector.** `embedding`, `embedding_model`, `embedded_at` are always written together, so "which model produced this" is never ambiguous.
 4. **Re-embedding is triggered by a null embedding, not by `updated_at`.** Any mutation of `script` must set `embedding = NULL` in the same statement. That is the entire invalidation mechanism and it has no second place to go wrong.
 5. **Failure is per batch, not per call.** A failed batch leaves those acts unembedded and the loop continues; the caller gets the count and the UI shows "n acts not yet embedded". Never partially write a batch.
@@ -57,7 +57,7 @@ Rules:
 - [ ] A second run embeds 0 acts and reports `remaining: 0`.
 - [ ] Setting `script` to a new value without clearing `embedding` is impossible through the controller (test: the update path nulls it).
 - [ ] A provider that returns a wrong-length vector aborts with `embeddingDimensionMismatch` and writes nothing.
-- [ ] With 40 pending acts and a failing provider on the second batch, acts 1–16 are embedded, the rest stay null, and the return value says so.
+- [ ] With 40 pending acts and a failing provider on the second batch, acts 1–8 are embedded, the rest stay null, and the return value says so.
 
 ## Anti-goals
 
