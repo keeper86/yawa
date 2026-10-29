@@ -89,7 +89,13 @@ A bead may carry a figure, because some arguments live in the numbers: two serie
 
 A figure is dropped, never fatal. If a series repeats an x value the chart cannot draw, `planLesson` sets that bead's `figure` to null and keeps the bead: a bad chart must not cost the learner the step. The schema rejects the rest before that (kinds, label lengths, point counts), and a plan that fails the schema still falls back to the act as a whole.
 
-What is missing: no log axes, so an exponential-looking curve cannot show its slope; no units check, so the model can label an axis wrongly without anything noticing; and no chart for the tutor to _point at_ ("look at the middle point"). If figures turn out to carry real teaching weight, the next step is a log option plus a `highlight` on a point, not more chart types.
+### Scales
+
+Charts auto-scale and can switch to logarithms. `src/lib/chartAxis.ts` holds the pure rules, taken from the neighbouring PolyEconGame: `linearDomain` pads the value range by 8% and opens a window when every value is equal, `trimmedLogAxis` drops the two smallest and two largest magnitudes and offers a log scale only once the remaining spread exceeds one decade, and `planAxis` decides between the two — bars are never logged, because a log bar loses its length meaning. `axisForScale` re-anchors the domain when the learner flips the axis.
+
+The switch is the point, not a preference. On log axes a power law becomes a straight line, and that is exactly the observation the first trapezoid bead is fishing for: three points at 1/6, 1/24 and 1/96 look like a steep curve on linear axes and like a straight line on log axes. So the toggle is a mechanism the learner drives, offered only when every value is positive, and the hint above the chart says what to look for.
+
+Not there: no units check, so the model can label an axis wrongly without anything noticing; no per-series axis choice; and no chart for the tutor to _point at_ ("look at the middle point"). Those wait until figures carry real weight in a session.
 
 ### Answering
 

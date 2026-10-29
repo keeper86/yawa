@@ -197,6 +197,9 @@
         }
     },
     "Charts": {
+        "linear": "Linear",
+        "log": "Log",
+        "logHint": "Log-Achsen machen aus einem Potenzgesetz eine Gerade.",
         "year": "Jahr {year}",
         "decade": "{decade}er",
         "previousDecember": "Vorheriger Dezember",

@@ -197,6 +197,9 @@
         }
     },
     "Charts": {
+        "linear": "Linear",
+        "log": "Log",
+        "logHint": "Log axes turn a power law into a straight line.",
         "year": "Year {year}",
         "decade": "{decade}s",
         "previousDecember": "Previous December",

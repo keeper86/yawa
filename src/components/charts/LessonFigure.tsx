@@ -1,6 +1,10 @@
 'use client';
 
+import { axisForScale, linearDomain, planAxis, type AxisScale } from '@/lib/chartAxis';
 import type { Figure } from '@/lib/lesson';
+import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
 import {
     Bar,
     BarChart,
@@ -20,7 +24,16 @@ const COLOURS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)'];
 
 const AXIS_TICK = { fontSize: 11, fill: 'var(--muted-foreground)' };
 
-const tick = (value: number) => new Intl.NumberFormat(undefined, { maximumSignificantDigits: 3 }).format(value);
+const formatTick = (value: number) => {
+    if (value === 0) {
+        return '0';
+    }
+    const magnitude = Math.abs(value);
+    if (magnitude >= 1000 || magnitude < 0.01) {
+        return value.toExponential(0).replace('e+', 'e');
+    }
+    return new Intl.NumberFormat(undefined, { maximumSignificantDigits: 3 }).format(value);
+};
 
 type Row = { x: number; [key: string]: number };
 
@@ -42,7 +55,22 @@ const toRows = (figure: Figure): Row[] => {
 };
 
 export const LessonFigure = ({ figure }: { figure: Figure }) => {
-    const rows = toRows(figure);
+    const t = useTranslations('Charts');
+    const [override, setOverride] = useState<AxisScale | null>(null);
+
+    const rows = useMemo(() => toRows(figure), [figure]);
+    const xValues = useMemo(() => rows.map((row) => row.x), [rows]);
+    const yValues = useMemo(() => figure.series.flatMap((series) => series.points.map((point) => point.y)), [figure]);
+
+    const plan = useMemo(() => planAxis(yValues, { allowLog: figure.kind !== 'bar' }), [yValues, figure.kind]);
+    const scale: AxisScale = override ?? plan.scale;
+    const yAxis = useMemo(() => axisForScale(yValues, scale), [yValues, scale]);
+    const xOnLog = scale === 'log' && figure.kind !== 'bar' && xValues.every((value) => value > 0);
+    const xAxis = useMemo(
+        () => (xOnLog ? axisForScale(xValues, 'log') : { domain: linearDomain(xValues), ticks: null }),
+        [xOnLog, xValues],
+    );
+
     const multiple = figure.series.length > 1;
 
     const axes = (
@@ -50,22 +78,28 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
             <CartesianGrid className='stroke-border' strokeDasharray='3 3' />
             <XAxis
                 dataKey='x'
+                domain={xAxis.domain}
                 height={44}
                 label={{ value: figure.xLabel, position: 'insideBottom', offset: -2, fontSize: 11 }}
+                scale={xOnLog ? 'log' : 'linear'}
                 tick={AXIS_TICK}
-                tickFormatter={tick}
+                tickFormatter={formatTick}
+                ticks={xAxis.ticks ?? undefined}
                 type='number'
             />
             <YAxis
+                domain={yAxis.domain}
                 label={{ value: figure.yLabel, angle: -90, position: 'insideLeft', fontSize: 11 }}
+                scale={scale}
                 tick={AXIS_TICK}
-                tickFormatter={tick}
+                tickFormatter={formatTick}
+                ticks={yAxis.ticks ?? undefined}
                 type='number'
                 width={64}
             />
             <Tooltip
-                formatter={(value: number) => tick(value)}
-                labelFormatter={(value: number) => `${figure.xLabel}: ${tick(value)}`}
+                formatter={(value: number) => formatTick(value)}
+                labelFormatter={(value: number) => `${figure.xLabel}: ${formatTick(value)}`}
             />
             {multiple ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
         </>
@@ -73,6 +107,30 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
 
     return (
         <figure className='space-y-1'>
+            <div className='flex min-h-5 items-center justify-between gap-3'>
+                <span className='text-[11px] text-muted-foreground'>{scale === 'log' ? t('logHint') : ''}</span>
+                {plan.canSwitch ? (
+                    <div className='flex gap-1'>
+                        {(['linear', 'log'] as const).map((option) => (
+                            <button
+                                aria-pressed={scale === option}
+                                className={cn(
+                                    'rounded border px-2 py-0.5 text-[11px]',
+                                    scale === option
+                                        ? 'bg-accent font-medium'
+                                        : 'text-muted-foreground hover:bg-accent/50',
+                                )}
+                                key={option}
+                                onClick={() => setOverride(option)}
+                                type='button'
+                            >
+                                {t(option)}
+                            </button>
+                        ))}
+                    </div>
+                ) : null}
+            </div>
+
             <div className='h-56 w-full'>
                 <ResponsiveContainer height='100%' width='100%'>
                     {figure.kind === 'bar' ? (
@@ -105,7 +163,7 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
                             {figure.series.map((series, index) => (
                                 <Line
                                     dataKey={`series${index}`}
-                                    dot={false}
+                                    dot={{ r: 3 }}
                                     key={series.label}
                                     name={series.label}
                                     stroke={COLOURS[index]}
