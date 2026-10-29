@@ -52,7 +52,10 @@
         "Imprint": "Imprint",
         "pat": "PAT Management",
         "logoAlt": "Yawa logo",
-        "brand": "Yawa"
+        "brand": "Yawa",
+        "Lectures": "Lectures",
+        "Tutor": "Tutor",
+        "Graph": "Graph"
     },
     "Sidebar": {
         "login": "Login",
@@ -280,6 +283,129 @@
             "revokeTitle": "Revoke token",
             "revokeConfirm": "Revoke this personal access token? It will be immediately invalidated but remain listed.",
             "deleteConfirm": "Delete this personal access token? This cannot be undone."
+        }
+    },
+    "Lectures": {
+        "title": "Lectures",
+        "subtitle": "Brief, sources, plan and the review queue in one place.",
+        "create": "New lecture",
+        "createTitle": "New lecture",
+        "createDescription": "A title and a language are enough to start.",
+        "name": "Title",
+        "language": "Language",
+        "empty": "No lectures yet.",
+        "emptyHint": "Create one and add a brief.",
+        "open": "Open",
+        "published": "Published",
+        "draft": "Draft",
+        "briefIncomplete": "Brief incomplete",
+        "tabs": {
+            "brief": "Brief",
+            "sources": "Sources",
+            "plan": "Plan",
+            "review": "Review"
+        },
+        "brief": {
+            "audience": "Audience",
+            "objectives": "Objectives",
+            "verb": "Verb",
+            "depth": "What exactly",
+            "mustCover": "Must cover",
+            "mustAvoid": "Must avoid",
+            "duration": "Duration in minutes",
+            "tone": "Tone",
+            "notes": "Notes",
+            "save": "Save brief",
+            "saved": "Brief saved",
+            "addObjective": "Add objective",
+            "remove": "Remove",
+            "tones": {
+                "formal": "Formal",
+                "neutral": "Neutral",
+                "conversational": "Conversational"
+            },
+            "verbs": {
+                "explain": "explain",
+                "apply": "apply",
+                "compare": "compare",
+                "estimate": "estimate",
+                "derive": "derive",
+                "classify": "classify"
+            }
+        },
+        "sources": {
+            "pasteTitle": "Paste a text",
+            "title": "Source title",
+            "text": "Text",
+            "add": "Add source",
+            "added": "Source added",
+            "wikiTitle": "Import from Wikipedia",
+            "wikiTerm": "Search term",
+            "wikiSearch": "Search",
+            "wikiImport": "Import",
+            "imported": "Article imported",
+            "noResults": "Nothing found.",
+            "sections": "{count} sections",
+            "remove": "Remove",
+            "empty": "No sources in scope."
+        },
+        "plan": {
+            "start": "Plan lecture",
+            "planning": "Planning",
+            "generate": "Generate acts",
+            "generating": "Generating",
+            "status": "Status",
+            "units": "Units",
+            "order": "Order",
+            "concept": "Concept",
+            "template": "Template",
+            "rationale": "Rationale",
+            "passages": "Passages",
+            "result": "{generated} generated, {failed} failed",
+            "none": "No plan yet.",
+            "error": "The last job failed"
+        },
+        "review": {
+            "progress": "{reviewed} of {total} reviewed",
+            "accept": "Accept",
+            "reject": "Reject",
+            "acceptHint": "A",
+            "rejectHint": "R",
+            "next": "Next",
+            "previous": "Previous",
+            "grounding": "Grounding",
+            "rubric": "Rubric",
+            "noGrounding": "No passage recorded.",
+            "empty": "Nothing to review.",
+            "emptyHint": "Plan the lecture and generate acts first.",
+            "accepted": "Accepted",
+            "rejected": "Rejected",
+            "acceptedToast": "Act accepted",
+            "rejectedToast": "Act rejected",
+            "shortcuts": "A accept, R reject, J next, K previous",
+            "rubricCodes": {
+                "grounded-in-source": "Grounded in a source",
+                "single-concept": "Teaches one concept",
+                "steps-are-explicit": "Steps are explicit",
+                "practice-fades": "Practice fades out",
+                "criterion-observable": "Success criterion is observable",
+                "prompts-justification": "Prompts a justification",
+                "cases-differ-in-one-feature": "Cases differ in one feature",
+                "similarities-surfaced": "Similarities are surfaced",
+                "prediction-before-observation": "Prediction comes first",
+                "outcome-explained": "Outcome is explained",
+                "no-cue-in-question": "No cue in the question",
+                "tone-matches-brief": "Tone matches the brief"
+            }
+        },
+        "publish": "Publish lecture",
+        "publishedToast": "Lecture published",
+        "templates": {
+            "worked-example": "Worked example",
+            "self-explanation": "Self-explanation",
+            "contrasting-cases": "Contrasting cases",
+            "predict-observe-explain": "Predict, observe, explain",
+            "retrieval-practice": "Retrieval practice"
         }
     }
 }

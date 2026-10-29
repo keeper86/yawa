@@ -52,7 +52,10 @@
         "Imprint": "Impressum",
         "pat": "PAT-Verwaltung",
         "logoAlt": "Yawa-Logo",
-        "brand": "Yawa"
+        "brand": "Yawa",
+        "Lectures": "Vorlesungen",
+        "Tutor": "Tutor",
+        "Graph": "Graph"
     },
     "Sidebar": {
         "login": "Anmelden",
@@ -280,6 +283,129 @@
             "revokeTitle": "Token widerrufen",
             "revokeConfirm": "Diesen persönlichen Zugangstoken widerrufen? Er wird sofort ungültig, bleibt aber weiterhin sichtbar.",
             "deleteConfirm": "Diesen persönlichen Zugangstoken löschen? Dies kann nicht rückgängig gemacht werden."
+        }
+    },
+    "Lectures": {
+        "title": "Vorlesungen",
+        "subtitle": "Briefing, Quellen, Plan und Pruefwarteschlange an einem Ort.",
+        "create": "Neue Vorlesung",
+        "createTitle": "Neue Vorlesung",
+        "createDescription": "Ein Titel und eine Sprache genuegen zum Start.",
+        "name": "Titel",
+        "language": "Sprache",
+        "empty": "Noch keine Vorlesung.",
+        "emptyHint": "Legen Sie eine an und ergaenzen Sie das Briefing.",
+        "open": "Oeffnen",
+        "published": "Veroeffentlicht",
+        "draft": "Entwurf",
+        "briefIncomplete": "Briefing unvollstaendig",
+        "tabs": {
+            "brief": "Briefing",
+            "sources": "Quellen",
+            "plan": "Plan",
+            "review": "Pruefen"
+        },
+        "brief": {
+            "audience": "Zielgruppe",
+            "objectives": "Lernziele",
+            "verb": "Verb",
+            "depth": "Was genau",
+            "mustCover": "Muss vorkommen",
+            "mustAvoid": "Darf nicht vorkommen",
+            "duration": "Dauer in Minuten",
+            "tone": "Ton",
+            "notes": "Notizen",
+            "save": "Briefing speichern",
+            "saved": "Briefing gespeichert",
+            "addObjective": "Lernziel hinzufuegen",
+            "remove": "Entfernen",
+            "tones": {
+                "formal": "Formell",
+                "neutral": "Neutral",
+                "conversational": "Locker"
+            },
+            "verbs": {
+                "explain": "erklaeren",
+                "apply": "anwenden",
+                "compare": "vergleichen",
+                "estimate": "schaetzen",
+                "derive": "herleiten",
+                "classify": "einordnen"
+            }
+        },
+        "sources": {
+            "pasteTitle": "Text einfuegen",
+            "title": "Titel der Quelle",
+            "text": "Text",
+            "add": "Quelle hinzufuegen",
+            "added": "Quelle hinzugefuegt",
+            "wikiTitle": "Aus Wikipedia importieren",
+            "wikiTerm": "Suchbegriff",
+            "wikiSearch": "Suchen",
+            "wikiImport": "Importieren",
+            "imported": "Artikel importiert",
+            "noResults": "Nichts gefunden.",
+            "sections": "{count} Abschnitte",
+            "remove": "Entfernen",
+            "empty": "Keine Quelle im Umfang."
+        },
+        "plan": {
+            "start": "Vorlesung planen",
+            "planning": "Wird geplant",
+            "generate": "Akte erzeugen",
+            "generating": "Wird erzeugt",
+            "status": "Status",
+            "units": "Einheiten",
+            "order": "Reihenfolge",
+            "concept": "Konzept",
+            "template": "Muster",
+            "rationale": "Begruendung",
+            "passages": "Passagen",
+            "result": "{generated} erzeugt, {failed} fehlgeschlagen",
+            "none": "Noch kein Plan.",
+            "error": "Der letzte Auftrag ist fehlgeschlagen"
+        },
+        "review": {
+            "progress": "{reviewed} von {total} geprueft",
+            "accept": "Annehmen",
+            "reject": "Ablehnen",
+            "acceptHint": "A",
+            "rejectHint": "R",
+            "next": "Weiter",
+            "previous": "Zurueck",
+            "grounding": "Grundlage",
+            "rubric": "Pruefkriterien",
+            "noGrounding": "Keine Passage hinterlegt.",
+            "empty": "Nichts zu pruefen.",
+            "emptyHint": "Planen Sie die Vorlesung und erzeugen Sie zuerst Akte.",
+            "accepted": "Angenommen",
+            "rejected": "Abgelehnt",
+            "acceptedToast": "Akt angenommen",
+            "rejectedToast": "Akt abgelehnt",
+            "shortcuts": "A annehmen, R ablehnen, J weiter, K zurueck",
+            "rubricCodes": {
+                "grounded-in-source": "Auf eine Quelle gestuetzt",
+                "single-concept": "Behandelt genau ein Konzept",
+                "steps-are-explicit": "Schritte sind explizit",
+                "practice-fades": "Uebung wird ausgeschlichen",
+                "criterion-observable": "Erfolgskriterium ist beobachtbar",
+                "prompts-justification": "Fordert eine Begruendung",
+                "cases-differ-in-one-feature": "Faelle unterscheiden sich in einem Merkmal",
+                "similarities-surfaced": "Gemeinsamkeiten werden benannt",
+                "prediction-before-observation": "Vorhersage kommt zuerst",
+                "outcome-explained": "Ergebnis wird erklaert",
+                "no-cue-in-question": "Kein Hinweis in der Frage",
+                "tone-matches-brief": "Ton passt zum Briefing"
+            }
+        },
+        "publish": "Vorlesung veroeffentlichen",
+        "publishedToast": "Vorlesung veroeffentlicht",
+        "templates": {
+            "worked-example": "Durchgerechnetes Beispiel",
+            "self-explanation": "Selbsterklaerung",
+            "contrasting-cases": "Kontrastierende Faelle",
+            "predict-observe-explain": "Vorhersagen, beobachten, erklaeren",
+            "retrieval-practice": "Abrufuebung"
         }
     }
 }

@@ -12,6 +12,7 @@ const actColumns = [
     'acts.concept_id',
     'concepts.title as concept_title',
     'templates.key as template_key',
+    'templates.rubric as rubric',
     'acts.template_version',
     'acts.title',
     'acts.script',
@@ -27,6 +28,7 @@ const actOutput = z.object({
     conceptId: z.string(),
     conceptTitle: z.string(),
     templateKey: z.string(),
+    rubric: z.array(z.string()),
     templateVersion: z.number().int(),
     title: z.string(),
     script: baseScriptSchema,
@@ -42,6 +44,7 @@ type ActRow = {
     concept_id: string;
     concept_title: string;
     template_key: string;
+    rubric: string[];
     template_version: number;
     title: string;
     script: unknown;
@@ -57,6 +60,7 @@ const toAct = (row: ActRow) => ({
     conceptId: row.concept_id,
     conceptTitle: row.concept_title,
     templateKey: row.template_key,
+    rubric: row.rubric,
     templateVersion: row.template_version,
     title: row.title,
     script: baseScriptSchema.parse(row.script),
