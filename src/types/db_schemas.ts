@@ -5,6 +5,7 @@ export enum Table {
     ActGrounding = 'act_grounding',
     ActReferences = 'act_references',
     Acts = 'acts',
+    ConceptRelations = 'concept_relations',
     Concepts = 'concepts',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
@@ -21,6 +22,7 @@ export type Tables = {
     act_grounding: ActGrounding;
     act_references: ActReferences;
     acts: Acts;
+    concept_relations: ConceptRelations;
     concepts: Concepts;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
@@ -63,6 +65,16 @@ export type Acts = {
     reviewed_at: Date | null;
     created_at: Date;
     updated_at: Date;
+};
+
+export type ConceptRelations = {
+    id: string;
+    source_concept_id: string;
+    target_concept_id: string;
+    type: string;
+    status: string;
+    created_by_user_id: string | null;
+    created_at: Date;
 };
 
 export type Concepts = {

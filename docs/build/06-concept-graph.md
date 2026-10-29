@@ -65,12 +65,24 @@ True means "reject with `relationCycle`". Run it inside the same transaction as 
 
 ## Acceptance
 
-- [ ] Migration up/down/up succeeds; `npm run db:types:update` adds `ConceptRelations`.
-- [ ] Self-edge rejected by the CHECK.
-- [ ] Duplicate `(source, target, type)` rejected by the unique constraint.
-- [ ] Cycle test: A→B→C, then C→A is refused with `relationCycle`; C→B is accepted; the reverse edge B→A is refused.
-- [ ] `contrasts_with` in both directions is collapsed to one row.
-- [ ] Traversal in chunk 09 ignores `suggested` edges for a user who did not create them.
+- [x] Migration up/down/up succeeds; `npm run db:types:update` adds `ConceptRelations`.
+- [x] Self-edge rejected by the CHECK and refused in code with a clear message.
+- [x] Duplicate `(source, target, type)` rejected by the unique constraint, and `linkConcepts` reports `created: false` instead of throwing.
+- [x] Cycle test on A→B→C: `C→A` refused, `B→A` refused, `C→B` refused, `A→C` **accepted** (a shortcut is not a cycle).
+- [x] `contrasts_with` in both directions is collapsed to one row.
+- [ ] Traversal in chunk 09 ignores `suggested` edges for a user who did not create them — belongs to that chunk.
+
+## State after execution
+
+Files: `migrations/20261029000005_concept_relations.js`, `src/server/graph/relations.ts`, `src/server/graph/relations.test.ts` (10 tests), `relationTypeSchema`/`relationStatusSchema` in `src/types/enums.ts`, `concept_relations` in `TABLES`.
+
+`linkConcepts(db, candidate)` returns `{ relation, created }`: a duplicate edge is idempotent rather than an error, because the creation agent in chunk 14 proposes edges and duplicates are expected there. Chunk 10 decides whether the UI reports `created: false` as a notice.
+
+**The transaction-abort trap, found by the test suite.** The first implementation inserted inside a transaction and caught the unique violation to re-select the existing row. Postgres aborts the entire transaction on any statement error, so the follow-up `SELECT` failed with `current transaction is aborted`. Two working alternatives exist — a `SAVEPOINT` around the insert, or checking before inserting. The code checks first, which is safe here because the transaction already holds `FOR UPDATE` locks on both concept rows: two concurrent linkers of the same pair serialise, and the second one sees the committed row. The unique constraint stays as the backstop for writes that bypass this function.
+
+Cycle detection runs the recursive query _inside_ that transaction, after the locks, and ignores `rejected` edges — otherwise a tombstoned edge would block the corrected direction forever. A test covers exactly that.
+
+Error signalling is still plain `Error` with a distinctive message, mapped to domain codes in chunk 10, the same deferral as chunks 03 and 05.
 
 ## Anti-goals
 

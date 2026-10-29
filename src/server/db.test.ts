@@ -7,6 +7,7 @@ export const TABLES = [
     'sources',
     'source_sections',
     'concepts',
+    'concept_relations',
     'templates',
     'acts',
     'act_grounding',

@@ -11,3 +11,9 @@ export type ActOrigin = z.infer<typeof actOriginSchema>;
 
 export const actStatusSchema = z.enum(['proposed', 'accepted', 'rejected']);
 export type ActStatus = z.infer<typeof actStatusSchema>;
+
+export const relationTypeSchema = z.enum(['requires', 'contrasts_with']);
+export type RelationType = z.infer<typeof relationTypeSchema>;
+
+export const relationStatusSchema = z.enum(['suggested', 'published', 'rejected']);
+export type RelationStatus = z.infer<typeof relationStatusSchema>;
