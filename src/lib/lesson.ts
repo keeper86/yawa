@@ -33,7 +33,7 @@ export const choiceBeadSchema = z.object({
     kind: z.literal('choice'),
     idea: z.string().min(1).max(600),
     question: z.string().min(1).max(400),
-    figure: figureSchema.nullable(),
+    figure: figureSchema.nullable().default(null),
     options: z.array(optionSchema).min(3).max(4),
 });
 
@@ -41,7 +41,7 @@ export const openBeadSchema = z.object({
     kind: z.literal('open'),
     idea: z.string().min(1).max(600),
     question: z.string().min(1).max(400),
-    figure: figureSchema.nullable(),
+    figure: figureSchema.nullable().default(null),
     expects: z.string().min(1).max(400),
 });
 

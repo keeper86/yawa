@@ -254,6 +254,31 @@ describe('planLesson figures', () => {
         expect(planned.beads[0].figure).toEqual(figure);
     });
 
+    it('accepts a bead that omits the figure field entirely', async () => {
+        const input = await prepare();
+        const withoutFigure = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Ohne Figure-Feld ist der Bead trotzdem brauchbar.',
+                    question: 'Was ist 1 + 1?',
+                    options: [
+                        { text: '2', correct: true, why: '' },
+                        { text: '3', correct: false, why: 'Falsch gezaehlt.' },
+                        { text: '4', correct: false, why: 'Doppelt gezaehlt.' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => withoutFigure });
+
+        const planned = await planLesson(ai, { ...input, diagnosis });
+
+        expect(planned.beads).toHaveLength(1);
+        expect(planned.beads[0].figure).toBeNull();
+        expect(planned.beads[0].kind).toBe('choice');
+    });
+
     it('drops a figure with a repeated x value but keeps the bead', async () => {
         const input = await prepare();
         const broken = {
