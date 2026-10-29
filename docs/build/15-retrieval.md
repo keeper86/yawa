@@ -61,7 +61,7 @@ Fused with reciprocal rank fusion, `k = 60`. RRF rather than score blending beca
 ```ts
 score =
     rrf *
-    originWeight(origin) * // authored 1.0, imported 0.9, generated 0.8
+    originWeight(origin) * // authored 1.0, generated 0.8
     templateFit(diagnosis, templateKey) *
     qualityShrinkage(uses, meanOutcome) *
     hopDecay(hop) * // hop 0: 1.0, hop 1: 0.8, hop 2: 0.6

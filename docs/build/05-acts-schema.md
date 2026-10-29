@@ -20,7 +20,7 @@ CREATE TABLE acts (
     template_id         UUID         NOT NULL REFERENCES templates(id) ON DELETE RESTRICT,
     template_version    INTEGER      NOT NULL,
     owner_user_id       VARCHAR(255) NOT NULL REFERENCES user_data(user_id) ON DELETE CASCADE,
-    origin              TEXT         NOT NULL CHECK (origin IN ('authored', 'generated', 'imported')),
+    origin              TEXT         NOT NULL CHECK (origin IN ('authored', 'generated')),
     status              TEXT         NOT NULL DEFAULT 'proposed'
                                      CHECK (status IN ('proposed', 'accepted', 'rejected')),
     title               TEXT         NOT NULL,
@@ -66,7 +66,7 @@ CREATE INDEX idx_act_references_concept ON act_references (concept_id);
 - **`template_version` is frozen on the act.** The service verifies `templates.version = template_version` on insert.
 - **`script_text` is the linearisation that was embedded.** Concatenate `title` and every `steps[].text` in order, newline separated. `content_hash = sha256(script_text + template.key + template_version)`. Re-embedding is driven by a hash mismatch, not by `updated_at`.
 - **`status` and `published_at` are separate.** `status` is the review decision, `published_at` is visibility. An accepted but unpublished act is private; a published act is readable by everyone and only ever `accepted` — enforced by the CHECK.
-- **`origin`** separates trusted from unproven material: `authored` (the creator wrote it), `imported` (content is essentially a source section), `generated` (an agent drafted it). The ranker weights by origin.
+- **`origin`** separates trusted from unproven material: `authored` (the creator wrote it) and `generated` (an agent drafted it). There is no `imported`: copying a source section verbatim is not an act, and nothing in the system creates one.
 - **Review audit.** `reviewed_by_user_id` and `reviewed_at` answer "who let this into the corpus" — needed the first time something wrong is published.
 
 ## Publication workflow
@@ -87,11 +87,23 @@ Drop `act_references`, `act_grounding`, `acts`. Do not drop the `vector` extensi
 
 ## Acceptance
 
-- [ ] Migration up/down/up succeeds; `npm run db:types:update` adds the three tables.
-- [ ] Setting `published_at` with `status='proposed'` fails the CHECK.
-- [ ] Deleting a source section referenced by `act_grounding` is refused (`ON DELETE RESTRICT`).
-- [ ] `EXPLAIN` on `ORDER BY embedding <=> $1 LIMIT 10` shows an index scan once a row has an embedding.
-- [ ] `script_text` and `content_hash` come from one shared function with unit tests, not from inline controller code.
+- [x] Migration up/down/up succeeds; `npm run db:types:update` adds the three tables.
+- [x] Setting `published_at` with `status='proposed'` fails the CHECK.
+- [x] Deleting a source section referenced by `act_grounding` is refused (`ON DELETE RESTRICT`).
+- [x] `EXPLAIN` on `ORDER BY embedding <=> $1 LIMIT 10` shows an index scan once a row has an embedding.
+- [x] `script_text` and `content_hash` come from one shared function with unit tests, not from inline controller code.
+
+## State after execution
+
+Files: `migrations/20261029000004_acts.js`, `src/server/act/acts.test.ts` (12 tests), `src/lib/actScript.ts` + `src/lib/actScript.test.ts` (6 tests), `actOriginSchema`/`actStatusSchema` in `src/types/enums.ts`, the three tables in `TABLES`.
+
+**The migration must create the extension.** The DDL block above does not mention it, and that is a trap: pgvector ships with the image but is not enabled in a fresh database, so `vector(768)` fails on any new volume and inside every testcontainer. The migration starts with `CREATE EXTENSION IF NOT EXISTS vector` and `down` deliberately does not drop it.
+
+`acts.test.ts` covers: both enums against their CHECK constraints, default `proposed`, publication refused before acceptance, 3-dimensional vector refused with a message naming 768, 768-dimensional vector stored with its model name, section deletion refused while grounded, grounding dropped with the act, duplicate grounding and duplicate reference refused, unknown concept refused, template deletion refused while acts use it.
+
+The HNSW check runs `EXPLAIN ... ORDER BY embedding <=> $1 LIMIT 5` inside a transaction with `SET LOCAL enable_seqscan = off`. At two rows the planner is _right_ to scan sequentially, so the test asserts the index is available rather than that the planner prefers it. Revisit the plan at corpus size (chunk 17), not now.
+
+`origin` has two values after review: `authored` and `generated`. `imported` was dropped — a verbatim copy of a source section is not a teaching act, and no code path creates one. Invariant 6 in `00-conventions.md` was narrowed accordingly: only `generated` acts require grounding.
 
 ## Anti-goals
 

@@ -2,6 +2,9 @@
 // Do not touch them, or risk, your modifications being lost.
 
 export enum Table {
+    ActGrounding = 'act_grounding',
+    ActReferences = 'act_references',
+    Acts = 'acts',
     Concepts = 'concepts',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
@@ -15,6 +18,9 @@ export enum Table {
 }
 
 export type Tables = {
+    act_grounding: ActGrounding;
+    act_references: ActReferences;
+    acts: Acts;
     concepts: Concepts;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
@@ -25,6 +31,38 @@ export type Tables = {
     sources: Sources;
     templates: Templates;
     user_data: UserData;
+};
+
+export type ActGrounding = {
+    act_id: string;
+    source_section_id: string;
+};
+
+export type ActReferences = {
+    act_id: string;
+    concept_id: string;
+};
+
+export type Acts = {
+    id: string;
+    concept_id: string;
+    template_id: string;
+    template_version: number;
+    owner_user_id: string;
+    origin: string;
+    status: string;
+    title: string;
+    script: unknown;
+    script_text: string;
+    content_hash: string;
+    embedding: unknown | null;
+    embedding_model: string | null;
+    embedded_at: Date | null;
+    published_at: Date | null;
+    reviewed_by_user_id: string | null;
+    reviewed_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
 };
 
 export type Concepts = {

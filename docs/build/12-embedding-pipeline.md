@@ -5,7 +5,7 @@ Depends on: 05, 10, 11. Blocks: 15.
 ## Decision gate
 
 - Is embedding still synchronous inside a mutation? Yes, bounded: a lecture generates tens of acts, not thousands. A background worker is only justified when a job outlives a request — the creation job in chunk 14 already is one, so it can embed its own output before returning.
-- Do we deduplicate identical `script_text` across acts to save calls? Not yet. Measure first; imported acts are the only likely duplicates.
+- Do we deduplicate identical `script_text` across acts to save calls? Not yet. Measure first; re-generating the same unit is the only likely source of duplicates.
 
 ## Deliverables
 
@@ -17,17 +17,12 @@ src/server/controller/act.ts       embedActs procedure
 
 ## The unit of work
 
-An act is embedded from `script_text`, which is produced by one function:
+An act is embedded from `script_text`, which the two helpers from chunk 05 produce (`src/lib/actScript.ts`):
 
-```ts
-export const actText = (act: { title: string; script: { steps: { text: string }[] } }): string =>
-    [act.title, ...act.script.steps.map((step) => step.text)].join('\n');
+- `actText({ title, script })` — title plus step texts, trimmed, newline separated;
+- `actContentHash(text, templateKey, templateVersion)` — sha256 over `"key@version\ntext"`.
 
-export const actContentHash = (text: string, templateKey: string, templateVersion: number): string =>
-    createHash('sha256').update(`${templateKey}@${templateVersion}\n${text}`).digest('hex');
-```
-
-Both are shared with chunk 05's insert path, so an act's hash is computed once and means one thing.
+They live one chunk earlier than this one because the insert path in chunk 05 needs the same hash: an act's `content_hash` is computed once, at write time, and means exactly one thing.
 
 ## Embedding pending acts
 

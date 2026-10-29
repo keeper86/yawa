@@ -33,7 +33,7 @@ Each is testable. A chunk that breaks one of these is wrong, regardless of how c
 3. **An act teaches exactly one concept.** Additional concepts may be referenced as context (`act_references`) but are never traversal targets.
 4. **Concepts are shared and unowned.** Identity is `(language, slug)`, plus `wikidata_qid` when known. No per-user concept universes.
 5. **Agent output starts unaccepted.** Generation produces acts with `status='proposed'`. Only a human acceptance moves an act to `accepted`.
-6. **Every act is traceable to its grounding.** `generated` and `imported` acts require at least one `act_grounding` row; `authored` acts may have none.
+6. **Every act is traceable to its grounding.** `generated` acts require at least one `act_grounding` row; `authored` acts may have none.
 7. **Publication state lives on the act; ordering lives on the lecture.** A published lecture contains only published acts.
 8. **Prerequisite traversal is depth-limited to 2.** Deeper gaps are reached by re-seeding from the failed prerequisite after new evidence, not by walking further in one query.
 9. **No network in tests.** Chat, embeddings and Wikipedia are injected; the fake provider is the default under test.

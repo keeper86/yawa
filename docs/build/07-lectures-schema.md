@@ -81,7 +81,7 @@ Two validation rules, both enforced when the creation agent starts (chunk 14) an
 Publishing a lecture:
 
 1. requires `brief` to pass validation;
-2. requires every act in `lecture_acts` to have `status='accepted'` and `origin IN ('authored','imported','generated')` with grounding present for the latter two;
+2. requires every act in `lecture_acts` to have `status='accepted'` and `origin IN ('authored','generated')` with grounding present for the latter two;
 3. sets `published_at` on the lecture and on those acts, and stamps `reviewed_by_user_id`/`reviewed_at` where missing;
 4. is refused if any act is `proposed` or `rejected`.
 

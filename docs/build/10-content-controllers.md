@@ -53,7 +53,7 @@ Each has `.input()` and `.output()`; all are `protectedProcedure` (PAT access is
 | `act.list`                     | lectureId or conceptId, status, cursor   | the review queue's data source                                                                                             |
 | `act.get`                      | actId                                    | includes grounding sections and rubric                                                                                     |
 | `act.review`                   | actId, decision `accepted` \| `rejected` | sets `reviewed_by_user_id`, `reviewed_at`                                                                                  |
-| `act.publish`                  | actId                                    | guard: `status='accepted'`, grounding present for generated/imported                                                       |
+| `act.publish`                  | actId                                    | guard: `status='accepted'`, grounding present for generated                                                                |
 | `lecture.create`               | title, language                          | owner from context                                                                                                         |
 | `lecture.updateBrief`          | lectureId, brief                         | validates against the brief schema                                                                                         |
 | `lecture.setScope`             | lectureId, conceptIds, sourceIds         | replaces scope in one transaction                                                                                          |
