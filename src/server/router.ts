@@ -1,4 +1,10 @@
-import { get as getAct, list as listActs, publish as publishAct, review as reviewAct } from './controller/act';
+import {
+    embed as embedActs,
+    get as getAct,
+    list as listActs,
+    publish as publishAct,
+    review as reviewAct,
+} from './controller/act';
 import {
     get as getConcept,
     link,
@@ -66,6 +72,7 @@ const actRouter = trpcRoot.router({
     get: getAct(),
     review: reviewAct(),
     publish: publishAct(),
+    embed: embedActs(),
 });
 
 const lectureRouter = trpcRoot.router({

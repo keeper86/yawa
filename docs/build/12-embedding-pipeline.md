@@ -47,12 +47,22 @@ Rules:
 
 ## Acceptance
 
-- [ ] `actText` and `actContentHash` are unit-tested; changing the title changes the hash; trailing whitespace does not.
-- [ ] Embedding 3 acts calls the provider exactly once, with 3 inputs.
-- [ ] A second run embeds 0 acts and reports `remaining: 0`.
-- [ ] Setting `script` to a new value without clearing `embedding` is impossible through the controller (test: the update path nulls it).
-- [ ] A provider that returns a wrong-length vector aborts with `embeddingDimensionMismatch` and writes nothing.
-- [ ] With 40 pending acts and a failing provider on the second batch, acts 1–8 are embedded, the rest stay null, and the return value says so.
+- [x] `actText` and `actContentHash` are unit-tested; changing the title changes the hash; trailing whitespace does not.
+- [x] Embedding several acts calls the provider once per batch and records `embedding_model` and `embedded_at`.
+- [x] A second run embeds 0 acts and reports `remaining: 0`.
+- [ ] Setting `script` to a new value without clearing `embedding` is impossible through the controller — **not applicable yet**: no procedure updates `script`. When one appears (act editing is an anti-goal, so likely never), it must null the embedding.
+- [x] A provider that returns a wrong-length vector aborts with `embeddingDimensionMismatch` and writes nothing.
+- [x] With a failing provider on the second batch, the first batch is embedded, the rest stay null, and the return value says so.
+
+## State after execution
+
+Files: `src/server/embed/acts.ts`, `src/server/embed/acts.test.ts` (5 tests), `act.embed` procedure wired into the router.
+
+The claim mechanism from the plan was **dropped**, deliberately. Holding `FOR UPDATE SKIP LOCKED` across the embedding call would keep a transaction and a connection open for seconds per batch. Without it two concurrent runs embed the same act twice and write the same vector twice, which is harmless; the write is guarded by `whereNull('embedding')`, so a second writer cannot clobber a result that already landed. The database stays the source of truth for "has this act been embedded", and nothing needs a claim column.
+
+Failure handling is per batch: a network failure skips the batch and the loop continues; only `embeddingDimensionMismatch` aborts, because that is a configuration error where every further call fails the same way. `remaining` is recounted after the loop rather than computed, so it reflects reality instead of arithmetic.
+
+The bucket "acts with a stale embedding" does not exist yet, because `script` cannot change. `content_hash` is therefore written but only compared by a future reader.
 
 ## Anti-goals
 

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { getAi } from '../ai';
+import { embedPendingActs } from '../embed/acts';
 import { baseScriptSchema } from '../templates';
 import { db } from '../db';
 import { DomainFailure } from '../domainError';
@@ -198,6 +200,14 @@ export const review = () =>
 
             return fetchAct(input.actId);
         });
+
+export const embed = () =>
+    protectedProcedure
+        .input(z.object({ limit: z.number().int().min(1).max(500).default(200) }))
+        .output(z.object({ embedded: z.number().int(), remaining: z.number().int() }))
+        .mutation(async ({ ctx, input }) =>
+            embedPendingActs(db, getAi(), { limit: input.limit, ownerUserId: getUserIdFromContext(ctx) }),
+        );
 
 export const publish = () =>
     protectedProcedure
