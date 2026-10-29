@@ -54,7 +54,7 @@ describe('chat completions', () => {
 
         expect(calls[0].url).toBe('https://chat.example/v1/chat/completions');
         expect(calls[0].body.model).toBe('deepseek-flash');
-        expect(calls[0].body.max_tokens).toBe(4096);
+        expect(calls[0].body.max_tokens).toBe(16000);
         expect(calls[0].body.reasoning_effort).toBeUndefined();
         expect(calls[1].body.max_tokens).toBe(128);
         expect(calls[1].body.reasoning_effort).toBe('low');

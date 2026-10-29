@@ -44,6 +44,6 @@ export const aiConfigFromEnv = (): AiConfig => ({
     embeddingDim: Number(required('AI_EMBEDDING_DIM')),
 });
 
-export const DEFAULT_GENERATION_TOKENS = 4096;
+export const DEFAULT_GENERATION_TOKENS = 16000;
 export const DEFAULT_GRADING_TOKENS = 1024;
 export const MAX_EMBEDDING_BATCH = 32;

@@ -125,6 +125,9 @@ describe('creation agent', () => {
         const grounding = await getDb()('act_grounding').where({ act_id: acts[0].id });
         expect(grounding).toHaveLength(1);
         expect(grounding[0].source_section_id).toBe(section.id);
+
+        const linked = await getDb()('lecture_acts').where({ lecture_id: lecture.id });
+        expect(linked.map((entry) => entry.act_id)).toContain(acts[0].id);
     });
 
     it('refuses a plan that misses a required concept', async () => {

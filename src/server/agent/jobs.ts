@@ -71,6 +71,7 @@ export const planLecture = async (
     try {
         const draft = await ai.chatStructured(buildPlanMessages(toPlanContext(context)), planSchema, {
             effort: 'high',
+            maxTokens: 16000,
         });
         const plan = validatePlan(draft, toPlanContext(context));
 

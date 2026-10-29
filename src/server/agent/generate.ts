@@ -145,5 +145,15 @@ export const generateActDraft = async (
 
     await db('act_grounding').insert(passages.map((passage) => ({ act_id: act.id, source_section_id: passage.id })));
 
+    const lastPosition = await db('lecture_acts')
+        .where({ lecture_id: context.lecture.id })
+        .max<{ max: number | null }>('position as max')
+        .first();
+    await db('lecture_acts').insert({
+        lecture_id: context.lecture.id,
+        act_id: act.id,
+        position: Number(lastPosition?.max ?? -1) + 1,
+    });
+
     return { actId: act.id, title: act.title };
 };
