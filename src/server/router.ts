@@ -41,6 +41,7 @@ import {
 import { createPAT, deletePAT, listPATs, revokePAT } from './controller/pAccessToken';
 import { addText, importWiki, list as listSources, remove as removeSource, searchWiki } from './controller/source';
 import { getUser, getUserIdFromSession, getUsers, updateUser } from './controller/user';
+import { tutorRouter } from './controller/tutor';
 import { trpcRoot } from './trpcRoot';
 
 const messageRouter = trpcRoot.router({
@@ -93,6 +94,14 @@ const lectureRouter = trpcRoot.router({
     latestJob: latestJob(),
 });
 
+const tutorRouterRoot = trpcRoot.router({
+    start: tutorRouter.start(),
+    next: tutorRouter.next(),
+    respond: tutorRouter.respond(),
+    close: tutorRouter.close(),
+    conceptDiagnosis: tutorRouter.conceptDiagnosis(),
+});
+
 const protectedAppRouter = trpcRoot.router({
     getUsers: getUsers(),
     getUser: getUser(),
@@ -102,6 +111,7 @@ const protectedAppRouter = trpcRoot.router({
     source: sourceRouter,
     act: actRouter,
     lecture: lectureRouter,
+    tutor: tutorRouterRoot,
     createPAT: createPAT(),
     listPATs: listPATs(),
     revokePAT: revokePAT(),

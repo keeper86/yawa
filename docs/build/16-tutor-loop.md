@@ -77,12 +77,28 @@ The first creator to try an act is therefore the cheapest possible reviewer, and
 
 ## Acceptance
 
-- [ ] Mastery properties above are unit-tested directly.
-- [ ] `respond` writes one evidence row, one turn and one state update, atomically.
-- [ ] A rehearsal session leaves `learner_concept_state` and `learner_evidence` untouched (test asserts row counts).
-- [ ] `next` on a session whose goal concept has no visible acts returns a domain error (`noActAvailable`), not an empty turn.
-- [ ] The chosen act's id and the retrieval snapshot are on the agent turn.
-- [ ] Grading failure still produces a completed turn with `outcome=0.5`.
+- [x] Mastery properties above are unit-tested directly.
+- [x] `respond` writes one evidence row, one turn and one state update, atomically.
+- [x] A rehearsal session leaves `learner_concept_state` and `learner_evidence` untouched (test asserts row counts).
+- [x] `next` on a session whose goal concept has no visible acts returns `noActAvailable`, not an empty turn.
+- [x] The chosen act's id and the retrieval snapshot are on the agent turn.
+- [x] Grading failure still produces a completed turn with `outcome=0.5`.
+
+## State after execution
+
+Files: `src/server/tutor/{mastery,diagnose,grade,session}.ts`, `src/server/tutor/session.test.ts` (11 tests), `src/server/controller/tutor.ts` (five procedures), `sessionNotFound` and `noActAvailable` domain codes.
+
+The mastery formula as implemented: `alpha = clamp(0.4 / (1 + 0.3 (n-1)), 0.08, 0.4)`, `mastery' = clamp(mastery + alpha (outcome - mastery), 0.02, 0.98)`, `confidence = 1 - 0.5^(n/3)`. Tests pin the three properties that matter: one outcome never moves mastery by more than 0.4, twenty identical outcomes converge below 0.98 without overshooting, and confidence depends only on the number of outcomes, not their direction.
+
+The rehearsal guard is a single early return before the transaction, so a rehearsal writes turns — including the graded one — and touches neither `learner_evidence` nor `learner_concept_state`. The test asserts all three row counts.
+
+Grading goes through `chatStructured` with `effort: 'low'`; a failure is logged and recorded as `outcome = 0.5, substantive = false` rather than interrupting the learner.
+
+`session.ts` uses three turns per exchange: the agent presents the act, the learner answers, the agent records the grade. Evidence hangs off the _learner_ turn, because that is the row that contains the answer.
+
+## Correction this chunk forced on chunk 15
+
+The "goal concept has no acts" test failed because retrieval was serving acts from unrelated concepts — a session could teach something outside its own goal. `retrieve` now filters candidates to the goal's closure. That is recorded in `15-retrieval.md`, because it changes that chunk's contract: seeds order, the closure admits.
 
 ## Anti-goals
 

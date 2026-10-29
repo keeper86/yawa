@@ -96,6 +96,7 @@ export const retrieve = async (
         )) as ActRow[];
 
     const candidates = rows
+        .filter((row) => hops.has(row.concept_id))
         .map((row) => {
             const hop = hopByAct.get(row.id) ?? null;
             const components = scoreComponents({

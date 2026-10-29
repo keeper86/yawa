@@ -115,6 +115,10 @@ Known limitation, deliberately left in: `predict-observe-explain` is never chose
 
 ## Anti-goals
 
+## Correction found while building chunk 16
+
+Retrieval returned vector and lexical hits from **any** concept, so a session whose goal concept had no acts was served an act about something else entirely. Candidates are now filtered to the goal concept's closure — the goal plus its prerequisites to depth 2. Seeds still order the candidates; the closure decides which of them are admissible. Without that filter the goal concept would be decoration.
+
 - No reranker model.
 - No LLM in the ranking path.
 - No caching layer. Measure before caching.

@@ -26,7 +26,9 @@
         "aiInvalidResponse": "Das Sprachmodell hat eine unbrauchbare Antwort geliefert. Bitte versuche es erneut.",
         "embeddingDimensionMismatch": "Das Einbettungsmodell passt nicht zur eingestellten Dimension",
         "planIncomplete": "Der Plan erfüllt das Briefing nicht vollständig",
-        "creationJobActive": "Für diese Vorlesung läuft bereits ein Erzeugungsauftrag"
+        "creationJobActive": "Für diese Vorlesung läuft bereits ein Erzeugungsauftrag",
+        "sessionNotFound": "Sitzung nicht gefunden",
+        "noActAvailable": "Dafür gibt es gerade keinen passenden Akt"
     },
     "Units": {
         "day": "Tag",
