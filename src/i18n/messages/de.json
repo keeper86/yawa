@@ -24,7 +24,9 @@
         "publicationRefused": "Veröffentlichte Akte können nicht geändert werden",
         "aiUnavailable": "Das Sprachmodell ist gerade nicht erreichbar. Bitte versuche es erneut.",
         "aiInvalidResponse": "Das Sprachmodell hat eine unbrauchbare Antwort geliefert. Bitte versuche es erneut.",
-        "embeddingDimensionMismatch": "Das Einbettungsmodell passt nicht zur eingestellten Dimension"
+        "embeddingDimensionMismatch": "Das Einbettungsmodell passt nicht zur eingestellten Dimension",
+        "planIncomplete": "Der Plan erfüllt das Briefing nicht vollständig",
+        "creationJobActive": "Für diese Vorlesung läuft bereits ein Erzeugungsauftrag"
     },
     "Units": {
         "day": "Tag",

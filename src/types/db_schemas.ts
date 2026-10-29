@@ -8,6 +8,7 @@ export enum Table {
     Acts = 'acts',
     ConceptRelations = 'concept_relations',
     Concepts = 'concepts',
+    CreationJobs = 'creation_jobs',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
     LearnerConceptState = 'learner_concept_state',
@@ -34,6 +35,7 @@ export type Tables = {
     acts: Acts;
     concept_relations: ConceptRelations;
     concepts: Concepts;
+    creation_jobs: CreationJobs;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
     learner_concept_state: LearnerConceptState;
@@ -113,6 +115,17 @@ export type Concepts = {
     wikidata_qid: string | null;
     created_by_user_id: string | null;
     created_at: Date;
+};
+
+export type CreationJobs = {
+    id: string;
+    lecture_id: string;
+    requested_by_user_id: string;
+    status: string;
+    plan: unknown | null;
+    error: string | null;
+    created_at: Date;
+    updated_at: Date;
 };
 
 export type KnexMigrations = {

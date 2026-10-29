@@ -1,6 +1,8 @@
 import { scriptSchemaWithRoles } from './script';
 import type { TemplateDefinition } from './types';
 
+const roles = ['setup', 'model', 'fade', 'check'] as const;
+
 export const workedExample: TemplateDefinition = {
     key: 'worked-example',
     version: 1,
@@ -11,5 +13,6 @@ export const workedExample: TemplateDefinition = {
         'The last step must be solved by the learner alone, and the success criterion must state what a correct last step looks like.',
         'Never introduce a second concept. If the solution needs another idea, name it as a prerequisite instead of explaining it.',
     ].join(' '),
-    scriptSchema: scriptSchemaWithRoles(['setup', 'model', 'fade', 'check']),
+    roles,
+    scriptSchema: scriptSchemaWithRoles(roles),
 };

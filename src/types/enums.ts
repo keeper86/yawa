@@ -26,3 +26,6 @@ export type TurnRole = z.infer<typeof turnRoleSchema>;
 
 export const evidenceKindSchema = z.enum(['answer', 'self_report', 'act_completed', 'act_abandoned']);
 export type EvidenceKind = z.infer<typeof evidenceKindSchema>;
+
+export const creationJobStatusSchema = z.enum(['planning', 'plan_ready', 'generating', 'completed', 'failed']);
+export type CreationJobStatus = z.infer<typeof creationJobStatusSchema>;

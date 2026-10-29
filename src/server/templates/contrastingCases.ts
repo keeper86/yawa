@@ -1,6 +1,8 @@
 import { scriptSchemaWithRoles } from './script';
 import type { TemplateDefinition } from './types';
 
+const roles = ['setup', 'show', 'compare', 'conclude'] as const;
+
 export const contrastingCases: TemplateDefinition = {
     key: 'contrasting-cases',
     version: 1,
@@ -11,5 +13,6 @@ export const contrastingCases: TemplateDefinition = {
         'After the learner answers, confirm or correct the feature explicitly and show what would happen if the cases were swapped.',
         'The success criterion names the discriminating feature and the consequence of getting it wrong.',
     ].join(' '),
-    scriptSchema: scriptSchemaWithRoles(['setup', 'show', 'compare', 'conclude']),
+    roles,
+    scriptSchema: scriptSchemaWithRoles(roles),
 };

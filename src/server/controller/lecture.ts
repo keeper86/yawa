@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { briefSchema } from '@/lib/lectureBrief';
 import type { Lectures } from '@/types/db_schemas';
+import { getAi } from '../ai';
+import { planLecture, runCreationJob } from '../agent/jobs';
 import { db } from '../db';
 import { DomainFailure } from '../domainError';
 import { publishLecture } from '../lectures/publish';
@@ -194,6 +196,60 @@ export const get = () =>
                 .pluck('act_id');
 
             return { lecture: toLecture(lecture), conceptIds, actIds };
+        });
+
+export const plan = () =>
+    protectedProcedure
+        .input(z.object({ lectureId: z.string().uuid() }))
+        .output(
+            z.object({
+                jobId: z.string(),
+                status: z.string(),
+                plan: z.unknown(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const job = await planLecture(db, getAi(), {
+                lectureId: input.lectureId,
+                userId: getUserIdFromContext(ctx),
+            });
+            return { jobId: job.id, status: job.status, plan: job.plan };
+        });
+
+export const generate = () =>
+    protectedProcedure
+        .input(z.object({ jobId: z.string().uuid(), maxUnits: z.number().int().min(1).max(40).nullable() }))
+        .output(z.object({ generated: z.number().int(), failed: z.number().int() }))
+        .mutation(async ({ ctx, input }) =>
+            runCreationJob(db, getAi(), {
+                jobId: input.jobId,
+                userId: getUserIdFromContext(ctx),
+                maxUnits: input.maxUnits ?? undefined,
+            }),
+        );
+
+export const latestJob = () =>
+    protectedProcedure
+        .input(z.object({ lectureId: z.string().uuid() }))
+        .output(
+            z
+                .object({
+                    jobId: z.string(),
+                    status: z.string(),
+                    plan: z.unknown(),
+                    error: z.string().nullable(),
+                })
+                .nullable(),
+        )
+        .query(async ({ ctx, input }) => {
+            const userId = getUserIdFromContext(ctx);
+            await ownedLecture(input.lectureId, userId);
+
+            const job = await db('creation_jobs')
+                .where({ lecture_id: input.lectureId })
+                .orderBy('created_at', 'desc')
+                .first();
+            return job ? { jobId: job.id, status: job.status, plan: job.plan, error: job.error } : null;
         });
 
 export const publish = () =>

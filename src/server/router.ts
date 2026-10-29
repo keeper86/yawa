@@ -15,8 +15,11 @@ import {
 import { health } from './controller/health';
 import {
     create as createLecture,
+    generate as generateActs,
     get as getLecture,
+    latestJob,
     list as listLectures,
+    plan as planLecture,
     publish as publishLectureProcedure,
     setActs,
     setScope,
@@ -85,6 +88,9 @@ const lectureRouter = trpcRoot.router({
     setScope: setScope(),
     setActs: setActs(),
     publish: publishLectureProcedure(),
+    plan: planLecture(),
+    generate: generateActs(),
+    latestJob: latestJob(),
 });
 
 const protectedAppRouter = trpcRoot.router({

@@ -24,6 +24,8 @@ export const DOMAIN_ERROR_CODES = [
     'aiUnavailable',
     'aiInvalidResponse',
     'embeddingDimensionMismatch',
+    'planIncomplete',
+    'creationJobActive',
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];

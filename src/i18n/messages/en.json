@@ -24,7 +24,9 @@
         "publicationRefused": "Published acts cannot be changed",
         "aiUnavailable": "The language model is not reachable right now. Please try again.",
         "aiInvalidResponse": "The language model returned an unusable answer. Please try again.",
-        "embeddingDimensionMismatch": "The embedding model does not match the configured dimension"
+        "embeddingDimensionMismatch": "The embedding model does not match the configured dimension",
+        "planIncomplete": "The plan misses part of the brief",
+        "creationJobActive": "A creation job is already running for this lecture"
     },
     "Units": {
         "day": "day",

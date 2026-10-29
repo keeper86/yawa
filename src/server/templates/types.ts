@@ -9,5 +9,6 @@ export type TemplateDefinition = {
     version: number;
     name: string;
     promptFragment: string;
+    roles: readonly string[];
     scriptSchema: z.ZodType<Script>;
 };

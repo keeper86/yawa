@@ -99,15 +99,13 @@ export const createOpenAiCompatibleProvider = (config: AiConfig, fetchImpl: Fetc
                 `AI returned no content (finish reason ${choice?.finish_reason ?? 'unknown'})`,
             );
         }
-        return content;
-    };
-
-    const parseJson = (content: string): unknown => {
-        try {
-            return JSON.parse(content);
-        } catch {
-            throw new DomainFailure('aiInvalidResponse', 'AI returned invalid JSON');
+        if (choice?.finish_reason === 'length') {
+            throw new DomainFailure(
+                'aiInvalidResponse',
+                `AI answer was cut off at the token limit after ${content.length} characters; raise maxTokens`,
+            );
         }
+        return content;
     };
 
     return {
@@ -117,8 +115,19 @@ export const createOpenAiCompatibleProvider = (config: AiConfig, fetchImpl: Fetc
         chat: (messages, options = {}) => complete(messages, options, false),
 
         chatStructured: async <T>(messages: ChatMessage[], schema: z.ZodType<T>, options: ChatOptions = {}) => {
+            const parse = (content: string) => {
+                try {
+                    return schema.safeParse(JSON.parse(content));
+                } catch {
+                    return {
+                        success: false as const,
+                        error: { message: `response was not valid JSON: ${content.slice(0, 300)}` },
+                    };
+                }
+            };
+
             const first = await complete(messages, options, true);
-            const firstParse = schema.safeParse(parseJson(first));
+            const firstParse = parse(first);
             if (firstParse.success) {
                 return firstParse.data;
             }
@@ -135,13 +144,13 @@ export const createOpenAiCompatibleProvider = (config: AiConfig, fetchImpl: Fetc
                 options,
                 true,
             );
-            const secondParse = schema.safeParse(parseJson(repaired));
+            const secondParse = parse(repaired);
             if (secondParse.success) {
                 return secondParse.data;
             }
             throw new DomainFailure(
                 'aiInvalidResponse',
-                `AI did not produce the required JSON: ${secondParse.error.message}`,
+                `AI did not produce the required JSON: ${secondParse.error.message} (answer started: ${repaired.slice(0, 200)})`,
             );
         },
 

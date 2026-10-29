@@ -5,9 +5,18 @@ export const scriptStepSchema = z.object({
     text: z.string().min(1).max(1200),
 });
 
+export const successSchema = z.union([
+    z.object({ criterion: z.string().min(1).max(400) }),
+    z
+        .string()
+        .min(1)
+        .max(400)
+        .transform((criterion) => ({ criterion })),
+]);
+
 export const baseScriptSchema = z.object({
     steps: z.array(scriptStepSchema).min(3).max(8),
-    success: z.object({ criterion: z.string().min(1).max(400) }),
+    success: successSchema,
 });
 
 export type Script = z.infer<typeof baseScriptSchema>;

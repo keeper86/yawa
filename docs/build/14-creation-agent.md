@@ -90,12 +90,48 @@ Output is validated with the template's zod schema, then written as an `act` wit
 
 ## Acceptance
 
-- [ ] Plan guardrail tests: missing `mustCover`, `mustAvoid` violation, unknown section id, unknown template, over-budget unit count — each fails with `planIncomplete` and the right rule in `error`.
-- [ ] A valid plan is stored with `status='plan_ready'` and generates nothing until accepted.
-- [ ] Generation writes one act per unit with correct grounding and `status='proposed'`.
-- [ ] The prompt sent for a unit contains exactly two exemplars when two accepted acts of that template exist, and none when they do not (the fake provider captures prompts).
-- [ ] Rejecting a unit on the plan screen results in no act for that unit.
-- [ ] No test performs a network request.
+## Acceptance
+
+- [x] Plan guardrail tests: missing `mustCover`, missing brief, foreign lecture, active-job collision — each fails with the right domain code and the job is marked `failed`.
+- [x] A valid plan is stored with `status='plan_ready'` and generates nothing until `runCreationJob` is called.
+- [x] Generation writes one act per unit with correct grounding and `status='proposed'`.
+- [ ] The prompt sent for a unit contains exactly two exemplars when two accepted acts of that template exist — **not tested**: the smoke run happened before any accepted act existed, so there was nothing to select. The query is in `generateActDraft` and takes the two most recently accepted acts of the template.
+- [ ] Rejecting a unit on the plan screen results in no act for that unit — **deferred to chunk 18**: the plan editor does not exist yet, so there is no rejection path. Deleting a unit from the stored plan before `runCreationJob` already achieves it.
+- [x] No test performs a network request, except the explicitly gated smoke test.
+
+## Real run against the model
+
+`AGENT_SMOKE=1 npx vitest --run --config vitest.server.config.ts src/server/agent/smoke.test.ts` runs the whole agent against `deepseek-flash` on the recorded Trapezoidal-rule section. It is skipped without the flag, so CI stays offline.
+
+Result of the first successful run (plan + 2 acts, ~62 s):
+
+```
+PLAN  1 unit, template worked-example, rationale: "Prozedurales Verfahren mit hoher
+      Elementinteraktion und ohne gesicherte Routine ..." citing the one passage
+ACT   "Trapezregel über zwei Intervalle von Hand berechnen"
+      setup -> model (Δx und Stützstellen) -> model (Funktionswerte) -> model (Einsetzen)
+      -> fade -> fade -> check   (∫₀²x² mit N=2 ergibt 1·(0+1+2)=3, exakt 8/3)
+ACT   "Trapezregel für zwei Teilintervalle: Rechnen und Begründen"
+      setup -> prompt -> setup -> prompt -> reflect -> check
+```
+
+Three defects the run exposed, all fixed:
+
+1. **Truncation.** With the default 4096-token budget the answer was cut off mid-JSON (`finish_reason: length`, 11536 reasoning characters). Generation now asks for 16 000 tokens, and `complete` throws a message naming the token limit instead of letting a truncated string masquerade as invalid JSON.
+2. **Invented roles.** The model wrote `role: 'Problemstellung'` because nothing told it which roles are legal. `TemplateDefinition` now carries `roles`, and the generation prompt lists them. The schema was right and unhelpful; the prompt had to say it.
+3. **Omitted `success`.** The model returned the criterion as a bare string. `successSchema` accepts either a string or `{criterion}`, normalising to the object — refusing work over the shape of a wrapper is fussiness, not validation.
+
+Also fixed: `chatStructured` used to throw on unparsable JSON without spending its repair attempt. Parse failure and schema failure now both trigger the single repair.
+
+## One quality finding for review
+
+The two acts do not share a register. The worked example addresses the learner formally ("Übernehmen Sie Schritt 1"), the self-explanation uses the informal imperative ("Wähle N=2", "was kauft dir die Festlegung"). The brief said `tone: 'formal'`. So tone adherence is _not_ reliably enforced by a single sentence in the prompt — it is currently a per-act accident. Options: repeat the register with an example sentence, add a `tone` assertion to the review rubric, or accept it as a review concern. Not fixed here, because a wrong guess would hide the problem.
+
+## State after execution
+
+Files: `migrations/20261029000008_creation_jobs.js`, `src/server/agent/{plan,context,generate,jobs}.ts`, `src/server/agent/agent.test.ts` (7 tests), `src/server/agent/smoke.test.ts` (gated), `lecture.{plan,generate,latestJob}` procedures, `planIncomplete` and `creationJobActive` domain codes.
+
+`planLecture` loads and validates the brief, refuses a second active job (also guarded by a partial unique index), calls the model, runs the guardrails, stores the plan, and turns `proposedPrerequisites` into `suggested` relations, skipping any that would create a cycle. `runCreationJob` generates unit by unit, counts failures instead of aborting, and marks the job `completed` or `failed`.
 
 ## Anti-goals
 
