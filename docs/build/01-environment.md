@@ -129,3 +129,17 @@ What that means, without rounding in our favour:
 - No `openai` or `ai` npm package. The client in chunk 11 is plain `fetch`.
 - No GPU setup, no model fine-tuning, no reranker yet.
 - Do not put the embedder into `docker-compose.yaml` for production until chunk 11 defines the client config; a local-only embedder is acceptable for development.
+
+## Dependency quirk: the rollup binary
+
+`trpc-to-openapi` declares a bogus `optionalDependencies` entry, `@rollup/rollup-linux-x64-gnu@4.6.1`. npm hoists it to the top level and then deduplicates rollup's own requirement onto it, leaving `rollup@4.64.5` with a mismatched native parser. The symptom is not an error about rollup: the whole unit suite fails at transform with
+
+```
+TypeError: ast.body is not iterable
+  Plugin: vitest:mocks
+  File: tests/vitest/setup.ts
+```
+
+because the plugin calls rollup's `this.parse`, which without its native binary returns an unusable AST. `npm ls @rollup/rollup-linux-x64-gnu` shows it as `deduped invalid`.
+
+`package.json` therefore carries an override pinning that entry to rollup's version. It is a workaround for an upstream packaging bug, not a preference. If rollup moves to a different major, update the override in the same commit — and if the symptom ever returns, run `npm ls @rollup/rollup-linux-x64-gnu rollup` first, not a debugger.
