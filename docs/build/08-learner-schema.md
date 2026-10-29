@@ -93,11 +93,23 @@ Drop the view, then `learner_evidence`, `turns`, `tutor_sessions`, `learner_conc
 
 ## Acceptance
 
-- [ ] Migration up/down/up succeeds; `npm run db:types:update` adds the four tables and the view.
-- [ ] A `rehearsal` session without `lecture_id` is rejected by the CHECK.
-- [ ] Two turns with the same `(session_id, seq)` are rejected.
-- [ ] `mastery = 1.4` is rejected.
-- [ ] Deleting an act nulls `turns.act_id` and leaves the transcript intact.
+- [x] Migration up/down/up succeeds; `npm run db:types:update` adds the four tables and the view.
+- [x] A `rehearsal` session without `lecture_id` is rejected by the CHECK.
+- [x] Two turns with the same `(session_id, seq)` are rejected.
+- [x] `mastery = 1.4` is rejected.
+- [x] Deleting an act nulls `turns.act_id` and leaves the transcript intact.
+
+## State after execution
+
+Files: `migrations/20261029000007_learner.js`, `src/server/tutor/learner.test.ts` (10 tests), `sessionModeSchema`/`turnRoleSchema`/`evidenceKindSchema` in `src/types/enums.ts`, four tables in `TABLES`.
+
+The generated types include the view, so `db('act_template_quality')` is typed and queryable like a table. That was worth checking rather than assuming.
+
+Tests cover: three enums against their CHECK constraints, the default state (mastery 0.5, confidence 0, no evidence), out-of-range mastery, rehearsal without a lecture, duplicate turn sequence, transcript survival when the act is deleted, cascade of turns and evidence with the session, evidence refused without a turn, and the view aggregating two turns of the same act into `uses 2`, `mean_outcome 0.5`, `sessions 2`.
+
+The last test is the one that matters for chunk 15's shrinkage: an act that never ran must show `mean_outcome = null`, **not** `0`. `avg()` over no rows is null, and the ranker has to distinguish "no evidence" from "bad evidence" or the shrinkage formula will punish every fresh act equally with a broken one.
+
+This chunk is schema only. The behaviour — which rows get written, and how mastery moves — belongs to chunk 16, and the rehearsal write-guard stays a rule in code rather than a column, as agreed: `learner_evidence.turn_id` is `NOT NULL`, so evidence always hangs off a recorded turn, and the decision whether to _also_ update `learner_concept_state` depends on the session's mode, which the writer already has in hand.
 
 ## Anti-goals
 

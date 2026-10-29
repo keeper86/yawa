@@ -16,6 +16,10 @@ export const TABLES = [
     'lecture_concepts',
     'lecture_sources',
     'lecture_acts',
+    'learner_concept_state',
+    'tutor_sessions',
+    'turns',
+    'learner_evidence',
 ];
 
 const tableExists = async (table: string): Promise<boolean> => {

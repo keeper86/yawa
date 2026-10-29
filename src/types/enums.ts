@@ -17,3 +17,12 @@ export type RelationType = z.infer<typeof relationTypeSchema>;
 
 export const relationStatusSchema = z.enum(['suggested', 'published', 'rejected']);
 export type RelationStatus = z.infer<typeof relationStatusSchema>;
+
+export const sessionModeSchema = z.enum(['study', 'rehearsal']);
+export type SessionMode = z.infer<typeof sessionModeSchema>;
+
+export const turnRoleSchema = z.enum(['agent', 'learner']);
+export type TurnRole = z.infer<typeof turnRoleSchema>;
+
+export const evidenceKindSchema = z.enum(['answer', 'self_report', 'act_completed', 'act_abandoned']);
+export type EvidenceKind = z.infer<typeof evidenceKindSchema>;

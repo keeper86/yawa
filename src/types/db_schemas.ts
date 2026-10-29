@@ -4,11 +4,14 @@
 export enum Table {
     ActGrounding = 'act_grounding',
     ActReferences = 'act_references',
+    ActTemplateQuality = 'act_template_quality',
     Acts = 'acts',
     ConceptRelations = 'concept_relations',
     Concepts = 'concepts',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
+    LearnerConceptState = 'learner_concept_state',
+    LearnerEvidence = 'learner_evidence',
     LectureActs = 'lecture_acts',
     LectureConcepts = 'lecture_concepts',
     LectureSources = 'lecture_sources',
@@ -19,17 +22,22 @@ export enum Table {
     SourceSections = 'source_sections',
     Sources = 'sources',
     Templates = 'templates',
+    Turns = 'turns',
+    TutorSessions = 'tutor_sessions',
     UserData = 'user_data',
 }
 
 export type Tables = {
     act_grounding: ActGrounding;
     act_references: ActReferences;
+    act_template_quality: ActTemplateQuality;
     acts: Acts;
     concept_relations: ConceptRelations;
     concepts: Concepts;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
+    learner_concept_state: LearnerConceptState;
+    learner_evidence: LearnerEvidence;
     lecture_acts: LectureActs;
     lecture_concepts: LectureConcepts;
     lecture_sources: LectureSources;
@@ -40,6 +48,8 @@ export type Tables = {
     source_sections: SourceSections;
     sources: Sources;
     templates: Templates;
+    turns: Turns;
+    tutor_sessions: TutorSessions;
     user_data: UserData;
 };
 
@@ -51,6 +61,15 @@ export type ActGrounding = {
 export type ActReferences = {
     act_id: string;
     concept_id: string;
+};
+
+export type ActTemplateQuality = {
+    concept_id: string | null;
+    template_id: string | null;
+    template_key: string | null;
+    uses: string | null;
+    mean_outcome: number | null;
+    sessions: string | null;
 };
 
 export type Acts = {
@@ -106,6 +125,26 @@ export type KnexMigrations = {
 export type KnexMigrationsLock = {
     index: number;
     is_locked: number | null;
+};
+
+export type LearnerConceptState = {
+    user_id: string;
+    concept_id: string;
+    mastery: number;
+    confidence: number;
+    evidence_count: number;
+    last_evidence_at: Date | null;
+    updated_at: Date;
+};
+
+export type LearnerEvidence = {
+    id: string;
+    user_id: string;
+    concept_id: string;
+    turn_id: string;
+    kind: string;
+    outcome: number;
+    created_at: Date;
 };
 
 export type LectureActs = {
@@ -201,6 +240,28 @@ export type Templates = {
     rubric: string[];
     status: string;
     created_at: Date;
+};
+
+export type Turns = {
+    id: string;
+    session_id: string;
+    seq: number;
+    role: string;
+    act_id: string | null;
+    content: unknown;
+    retrieval: unknown | null;
+    outcome: number | null;
+    created_at: Date;
+};
+
+export type TutorSessions = {
+    id: string;
+    user_id: string;
+    goal_concept_id: string;
+    mode: string;
+    lecture_id: string | null;
+    created_at: Date;
+    closed_at: Date | null;
 };
 
 export type UserData = {
