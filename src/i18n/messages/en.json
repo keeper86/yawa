@@ -21,7 +21,10 @@
         "invalidBrief": "The brief is incomplete or invalid",
         "lectureNotPublishable": "This lecture cannot be published yet",
         "sourceInUse": "This source is used as grounding by at least one act",
-        "publicationRefused": "Published acts cannot be changed"
+        "publicationRefused": "Published acts cannot be changed",
+        "aiUnavailable": "The language model is not reachable right now. Please try again.",
+        "aiInvalidResponse": "The language model returned an unusable answer. Please try again.",
+        "embeddingDimensionMismatch": "The embedding model does not match the configured dimension"
     },
     "Units": {
         "day": "day",

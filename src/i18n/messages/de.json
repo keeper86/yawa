@@ -21,7 +21,10 @@
         "invalidBrief": "Das Briefing ist unvollständig oder ungültig",
         "lectureNotPublishable": "Diese Vorlesung kann noch nicht veröffentlicht werden",
         "sourceInUse": "Diese Quelle wird von mindestens einem Akt als Grundlage verwendet",
-        "publicationRefused": "Veröffentlichte Akte können nicht geändert werden"
+        "publicationRefused": "Veröffentlichte Akte können nicht geändert werden",
+        "aiUnavailable": "Das Sprachmodell ist gerade nicht erreichbar. Bitte versuche es erneut.",
+        "aiInvalidResponse": "Das Sprachmodell hat eine unbrauchbare Antwort geliefert. Bitte versuche es erneut.",
+        "embeddingDimensionMismatch": "Das Einbettungsmodell passt nicht zur eingestellten Dimension"
     },
     "Units": {
         "day": "Tag",

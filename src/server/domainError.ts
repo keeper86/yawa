@@ -21,6 +21,9 @@ export const DOMAIN_ERROR_CODES = [
     'lectureNotPublishable',
     'sourceInUse',
     'publicationRefused',
+    'aiUnavailable',
+    'aiInvalidResponse',
+    'embeddingDimensionMismatch',
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];

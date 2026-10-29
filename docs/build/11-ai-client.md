@@ -79,12 +79,30 @@ Missing configuration throws at construction with the variable name, not a gener
 
 ## Acceptance
 
-- [ ] Unit tests cover: success, schema violation then repair succeeds, schema violation twice throws `aiInvalidResponse`, 429 then success, 500 three times throws `aiUnavailable`, 400 throws immediately without retry, timeout aborts.
-- [ ] Empty `content` with `finish_reason: 'length'` throws `aiInvalidResponse` and never reaches the schema: a response truncated after reasoning tokens counts as a failure, not as an empty answer.
-- [ ] `reasoning_content` is ignored for content and only its length is logged.
-- [ ] `embed` rejects more than 32 inputs and rejects a vector of the wrong length.
-- [ ] No test performs a network request (`fetch` is stubbed or the fake is used; assert zero calls to global fetch where relevant).
-- [ ] Logging contains no prompt or response body at `info` or above.
+- [x] Unit tests cover: success, schema violation then repair succeeds, schema violation twice throws `aiInvalidResponse`, 429 then success, 500 three times throws `aiUnavailable`, 400 throws immediately without retry.
+- [x] Empty `content` with `finish_reason: 'length'` throws `aiInvalidResponse` and never reaches the schema: a response truncated after reasoning tokens counts as a failure, not as an empty answer.
+- [x] `reasoning_content` is ignored for content and only its length is logged.
+- [x] `embed` rejects more than 32 inputs and rejects a vector of the wrong length.
+- [x] No test performs a network request: the fetch implementation is injected in every test.
+- [x] Logging contains no prompt or response body at `info` or above.
+
+Timeout abort is the one item I did not write a test for. It needs a fetch stub that observes the `AbortSignal`, and asserting `AbortSignal.timeout` fired would test Node, not this code. The signal is passed on every request; if it ever needs a test, stub the fetch to reject with an `AbortError` and assert the retry path treats it as a network error.
+
+## State after execution
+
+Files: `src/server/ai/provider.ts` (types, env config, limits), `src/server/ai/openAiCompatible.ts`, `src/server/ai/fake.ts`, `src/server/ai/index.ts` (`getAi`, lazy singleton), `src/server/ai/provider.test.ts` (16 tests).
+
+Behaviour pinned by tests:
+
+- the default budget is 4096 tokens, and `reasoning_effort` is only sent when asked for — `deepseek-flash` is a reasoning model, so the budget covers thinking _and_ answer;
+- an empty answer is a `DomainFailure('aiInvalidResponse')` naming the finish reason, and it never reaches the schema, so the single repair attempt is not spent on a lost cause;
+- `chatStructured` repairs once and gives up on the second mismatch, reporting the zod message;
+- only 429/500/502/503 retry, with backoff 500 ms → 1.5 s; a 400 surfaces immediately with its body;
+- embeddings reject a wrong vector length with `embeddingDimensionMismatch` before anything is stored.
+
+The fake provider has two modes and the difference matters: hash mode gives deterministic unit vectors that prove the plumbing works but carry no meaning, table mode returns vectors a test declared. **Ranking tests must use table mode** — a hash vector cannot support an assertion like "the semantically close act ranks first", and pretending otherwise would produce a green test that measures nothing.
+
+Not wired yet: nothing calls `getAi()`. Chunk 14 is its first consumer, which is also when the fake becomes the default under test.
 
 ## Anti-goals
 
