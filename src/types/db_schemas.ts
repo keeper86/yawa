@@ -9,6 +9,10 @@ export enum Table {
     Concepts = 'concepts',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
+    LectureActs = 'lecture_acts',
+    LectureConcepts = 'lecture_concepts',
+    LectureSources = 'lecture_sources',
+    Lectures = 'lectures',
     Messages = 'messages',
     PersonalAccessTokens = 'personal_access_tokens',
     PersonalAccessTokensLogs = 'personal_access_tokens_logs',
@@ -26,6 +30,10 @@ export type Tables = {
     concepts: Concepts;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
+    lecture_acts: LectureActs;
+    lecture_concepts: LectureConcepts;
+    lecture_sources: LectureSources;
+    lectures: Lectures;
     messages: Messages;
     personal_access_tokens: PersonalAccessTokens;
     personal_access_tokens_logs: PersonalAccessTokensLogs;
@@ -98,6 +106,34 @@ export type KnexMigrations = {
 export type KnexMigrationsLock = {
     index: number;
     is_locked: number | null;
+};
+
+export type LectureActs = {
+    lecture_id: string;
+    act_id: string;
+    position: number;
+};
+
+export type LectureConcepts = {
+    lecture_id: string;
+    concept_id: string;
+};
+
+export type LectureSources = {
+    lecture_id: string;
+    source_id: string;
+};
+
+export type Lectures = {
+    id: string;
+    owner_user_id: string;
+    title: string;
+    abstract: string;
+    language: string;
+    brief: Record<string, unknown>;
+    published_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
 };
 
 export type Messages = {

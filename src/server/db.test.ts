@@ -12,6 +12,10 @@ export const TABLES = [
     'acts',
     'act_grounding',
     'act_references',
+    'lectures',
+    'lecture_concepts',
+    'lecture_sources',
+    'lecture_acts',
 ];
 
 const tableExists = async (table: string): Promise<boolean> => {

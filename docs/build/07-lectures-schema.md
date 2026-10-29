@@ -97,11 +97,24 @@ Drop `lecture_acts`, `lecture_sources`, `lecture_concepts`, `lectures`.
 
 ## Acceptance
 
-- [ ] Migration up/down/up succeeds; `npm run db:types:update` adds the four tables.
-- [ ] Brief schema rejects an unknown verb, a missing `mustCover` and an objective whose slug is absent from `lecture_concepts`.
-- [ ] Publishing a lecture with one `proposed` act fails with `lectureNotPublishable` and changes nothing.
-- [ ] Publishing stamps `published_at` on the lecture and on its acts in one transaction.
-- [ ] Deleting a lecture leaves its acts untouched.
+- [x] Migration up/down/up succeeds; `npm run db:types:update` adds the four tables.
+- [x] Brief schema rejects an unknown verb, a missing `mustCover` and an objective whose slug is absent from `lecture_concepts`.
+- [x] Publishing a lecture with one `proposed` act fails and changes nothing.
+- [x] Publishing stamps `published_at` on the lecture and on its acts in one transaction.
+- [x] Deleting a lecture leaves its acts untouched.
+
+## State after execution
+
+Files: `migrations/20261029000006_lectures.js`, `src/lib/lectureBrief.ts` + `src/lib/lectureBrief.test.ts` (9 unit tests), `src/server/lectures/publish.ts` + `src/server/lectures/publish.test.ts` (10 tests), the four tables in `TABLES`.
+
+The brief lives in `src/lib/` rather than `src/server/` because it is pure zod with no database access, and the unit project is the cheaper place to test it — a file under `src/server/` would spin a Postgres container to validate an enum.
+
+`publishLecture(db, { lectureId, userId })` locks the lecture row, then checks in this order: exists, owned by the caller, not already published (returns unchanged), brief parses, brief within scope, has acts, every act accepted and grounded when generated, every `mustCover` concept covered by an act. Only then does it stamp the acts and the lecture in the same transaction. Refusal therefore changes nothing, which the test asserts on both tables.
+
+Two notes for chunk 10:
+
+- The service throws plain `Error`s with distinctive messages (`not found`, `Only the owner`, `not publishable`, `no act covers`, `outside the lecture scope`, `no acts`). The controller maps them to `DOMAIN_ERROR_CODES`.
+- The creation agent in chunk 14 must call the same validation functions before spending tokens, so a brief that cannot pass the publish gate never reaches the model.
 
 ## Anti-goals
 
