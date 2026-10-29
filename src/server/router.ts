@@ -36,7 +36,7 @@ import {
     sendMessage,
 } from './controller/message';
 import { createPAT, deletePAT, listPATs, revokePAT } from './controller/pAccessToken';
-import { addText, list as listSources, remove as removeSource } from './controller/source';
+import { addText, importWiki, list as listSources, remove as removeSource, searchWiki } from './controller/source';
 import { getUser, getUserIdFromSession, getUsers, updateUser } from './controller/user';
 import { trpcRoot } from './trpcRoot';
 
@@ -63,6 +63,8 @@ const conceptRouter = trpcRoot.router({
 
 const sourceRouter = trpcRoot.router({
     addText: addText(),
+    importWiki: importWiki(),
+    searchWiki: searchWiki(),
     list: listSources(),
     remove: removeSource(),
 });

@@ -1,0 +1,26 @@
+{
+    "batchcomplete": true,
+    "query": {
+        "pages": [
+            {
+                "pageid": 873703,
+                "ns": 0,
+                "title": "Derivative (disambiguation)",
+                "contentmodel": "wikitext",
+                "pagelanguage": "en",
+                "pagelanguagehtmlcode": "en",
+                "pagelanguagedir": "ltr",
+                "touched": "2026-10-24T11:30:44Z",
+                "lastrevid": 1380202823,
+                "length": 2330,
+                "pageprops": {
+                    "disambiguation": "",
+                    "expectshortpage": "",
+                    "toc": "",
+                    "wikibase-shortdesc": "Topics referred to by the same term",
+                    "wikibase_item": "Q226671"
+                }
+            }
+        ]
+    }
+}

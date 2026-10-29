@@ -63,12 +63,27 @@ Record real responses once into `tests/fixtures/wiki/` (article with subsections
 
 ## Acceptance
 
-- [ ] Resolution rejects a disambiguation page and returns the canonical title for a redirect.
-- [ ] Importing the same revision twice creates one source and zero new sections.
-- [ ] A section list containing `References` produces no section for it.
-- [ ] `license`, `license_url`, `source_revision` and `uri` match the fixture exactly.
-- [ ] The stripper removes templates, refs, tables and headings from the fixture without losing prose.
-- [ ] No test performs a network request.
+- [x] Resolution rejects a disambiguation page and returns the canonical title for a redirect.
+- [x] Importing the same revision twice creates one source and zero new sections.
+- [x] A section list containing `References` produces no section for it.
+- [x] `license`, `license_url`, `source_revision` and `uri` match the fixture exactly.
+- [x] The stripper removes templates, refs, tables and headings from the fixture without losing prose.
+- [x] No test performs a network request.
+
+## State after execution
+
+Files: `src/server/wiki/client.ts`, `src/server/wiki/wikitext.ts`, `src/server/wiki/import.ts`, `src/server/wiki/client.test.ts` (9 tests), `src/server/wiki/import.test.ts` (5 tests), `source.searchWiki` and `source.importWiki` procedures, fixtures in `tests/fixtures/wiki/`.
+
+Fixtures were recorded once from the live API with a descriptive User-Agent, `maxlag=5`, one request at a time and a 50 ms pause: `rightsinfo.json`, `page-meta.json` (Trapezoidal rule, page 573452, revision 1378446929, `Q833293`), `tocdata.json` (17 sections), `section-2.json`, `redirect.json` (`Trapezoid rule` → `Trapezoidal rule`), `disambiguation.json` (`Derivative (disambiguation)`). Every test replays those files through an injected fetch, so the suite still touches no network.
+
+Deviations from the plan:
+
+- **Disambiguation is refused at import, not at search.** Wikipedia's search endpoint does not return page properties, so filtering at search would cost one extra request per candidate. The importer refuses with `sourceNotFound` and names the page, which is the point where it actually matters.
+- **`prop=tocdata` returns `index` as a string.** It is passed through as a string rather than parsed to a number, because that is what `action=parse&section=` expects.
+- **Only top-level sections are imported.** `section=2` already contains its subsections, so importing nested entries too would duplicate text.
+- **A newer revision creates a second source** with `external_id` suffixed `@<revid>` instead of replacing sections that acts are grounded in.
+
+The stripper keeps the LaTeX body of `<math>` blocks. For a numerics corpus a formula is content, and dropping it would leave sentences like "one can use the formula" with nothing following. Whether that survives the creation agent's judgement is chunk 14's problem, not the stripper's.
 
 ## Anti-goals
 

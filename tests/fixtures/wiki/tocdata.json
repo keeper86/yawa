@@ -1,0 +1,182 @@
+{
+    "parse": {
+        "title": "Trapezoidal rule",
+        "pageid": 573452,
+        "tocdata": {
+            "sections": [
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "History",
+                    "number": "1",
+                    "index": "1",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 4372,
+                    "anchor": "History"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "Numerical implementation",
+                    "number": "2",
+                    "index": "2",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 5275,
+                    "anchor": "Numerical_implementation"
+                },
+                {
+                    "tocLevel": 2,
+                    "hLevel": 3,
+                    "line": "Non-uniform grid",
+                    "number": "2.1",
+                    "index": "3",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 5307,
+                    "anchor": "Non-uniform_grid"
+                },
+                {
+                    "tocLevel": 2,
+                    "hLevel": 3,
+                    "line": "Uniform grid",
+                    "number": "2.2",
+                    "index": "4",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 6023,
+                    "anchor": "Uniform_grid"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "Error analysis",
+                    "number": "3",
+                    "index": "5",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 6783,
+                    "anchor": "Error_analysis"
+                },
+                {
+                    "tocLevel": 2,
+                    "hLevel": 3,
+                    "line": "Proof",
+                    "number": "3.1",
+                    "index": "6",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 8870,
+                    "anchor": "Proof"
+                },
+                {
+                    "tocLevel": 2,
+                    "hLevel": 3,
+                    "line": "Periodic and peak functions",
+                    "number": "3.2",
+                    "index": "7",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 11315,
+                    "anchor": "Periodic_and_peak_functions"
+                },
+                {
+                    "tocLevel": 2,
+                    "hLevel": 3,
+                    "line": "\"Rough\" functions",
+                    "number": "3.3",
+                    "index": "8",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 13501,
+                    "anchor": "\"Rough\"_functions"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "Applicability and alternatives",
+                    "number": "4",
+                    "index": "9",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 14029,
+                    "anchor": "Applicability_and_alternatives"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "Algorithm",
+                    "number": "5",
+                    "index": "10",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 15484,
+                    "anchor": "Algorithm"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "Numerical examples",
+                    "number": "6",
+                    "index": "11",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 16009,
+                    "anchor": "Numerical_examples"
+                },
+                {
+                    "tocLevel": 2,
+                    "hLevel": 3,
+                    "line": "Approximating the natural logarithm of 3",
+                    "number": "6.1",
+                    "index": "12",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 16032,
+                    "anchor": "Approximating_the_natural_logarithm_of_3"
+                },
+                {
+                    "tocLevel": 2,
+                    "hLevel": 3,
+                    "line": "Approximating the integral of a product",
+                    "number": "6.2",
+                    "index": "13",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 18077,
+                    "anchor": "Approximating_the_integral_of_a_product"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "See also",
+                    "number": "7",
+                    "index": "14",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 20259,
+                    "anchor": "See_also"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "Notes",
+                    "number": "8",
+                    "index": "15",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 20526,
+                    "anchor": "Notes"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "References",
+                    "number": "9",
+                    "index": "16",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 20564,
+                    "anchor": "References"
+                },
+                {
+                    "tocLevel": 1,
+                    "hLevel": 2,
+                    "line": "External links",
+                    "number": "10",
+                    "index": "17",
+                    "fromTitle": "Trapezoidal_rule",
+                    "codepointOffset": 21806,
+                    "anchor": "External_links"
+                }
+            ],
+            "extensionData": []
+        },
+        "showtoc": true
+    }
+}

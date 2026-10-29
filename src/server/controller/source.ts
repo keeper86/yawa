@@ -4,6 +4,8 @@ import type { Sources } from '@/types/db_schemas';
 import { db } from '../db';
 import { DomainFailure } from '../domainError';
 import { getUserIdFromContext, protectedProcedure } from '../trpcRoot';
+import { getWiki } from '../wiki/client';
+import { importArticle } from '../wiki/import';
 
 const sourceOutput = z.object({
     id: z.string(),
@@ -131,6 +133,45 @@ export const list = () =>
             const bySource = new Map(counts.map((entry) => [entry.source_id, Number(entry.count)]));
             return rows.map((row) => toSource(row, bySource.get(row.id) ?? 0));
         });
+
+export const importWiki = () =>
+    protectedProcedure
+        .input(
+            z.object({
+                lectureId: z.string().uuid(),
+                title: z.string().trim().min(1).max(200),
+                language: z.string().min(2).max(8),
+            }),
+        )
+        .output(sourceOutput)
+        .mutation(async ({ ctx, input }) => {
+            const userId = getUserIdFromContext(ctx);
+            await ownedLecture(input.lectureId, userId);
+
+            const { source, sections } = await importArticle(db, {
+                title: input.title,
+                language: input.language,
+                client: getWiki(),
+            });
+
+            await db('lecture_sources')
+                .insert({ lecture_id: input.lectureId, source_id: source.id })
+                .onConflict()
+                .ignore();
+
+            return toSource(source, sections);
+        });
+
+export const searchWiki = () =>
+    protectedProcedure
+        .input(z.object({ term: z.string().trim().min(2).max(120), language: z.string().min(2).max(8) }))
+        .output(z.array(z.object({ title: z.string(), pageId: z.number().int() })))
+        .query(async ({ input }) =>
+            (await getWiki().search(input.term, input.language)).map((candidate) => ({
+                title: candidate.title,
+                pageId: candidate.pageId,
+            })),
+        );
 
 export const remove = () =>
     protectedProcedure
