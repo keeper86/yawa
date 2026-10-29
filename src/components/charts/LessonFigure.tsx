@@ -1,7 +1,7 @@
 'use client';
 
 import { axisForScale, linearDomain, planAxis, type AxisScale } from '@/lib/chartAxis';
-import type { Figure } from '@/lib/lesson';
+import type { Figure, FigureAxis } from '@/lib/lesson';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
@@ -20,7 +20,7 @@ import {
     YAxis,
 } from 'recharts';
 
-const COLOURS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)'];
+const COLOURS = ['var(--chart-1)', 'var(--chart-2)'];
 
 const AXIS_TICK = { fontSize: 11, fill: 'var(--muted-foreground)' };
 
@@ -34,6 +34,8 @@ const formatTick = (value: number) => {
     }
     return new Intl.NumberFormat(undefined, { maximumSignificantDigits: 3 }).format(value);
 };
+
+const axisTitle = (axis: FigureAxis) => (axis.unit === '1' ? axis.label : `${axis.label} (${axis.unit})`);
 
 type Row = { x: number; [key: string]: number };
 
@@ -62,10 +64,11 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
     const xValues = useMemo(() => rows.map((row) => row.x), [rows]);
     const yValues = useMemo(() => figure.series.flatMap((series) => series.points.map((point) => point.y)), [figure]);
 
-    const plan = useMemo(() => planAxis(yValues, { allowLog: figure.kind !== 'bar' }), [yValues, figure.kind]);
+    const allowLog = figure.template !== 'compare';
+    const plan = useMemo(() => planAxis(yValues, { allowLog }), [yValues, allowLog]);
     const scale: AxisScale = override ?? plan.scale;
     const yAxis = useMemo(() => axisForScale(yValues, scale), [yValues, scale]);
-    const xOnLog = scale === 'log' && figure.kind !== 'bar' && xValues.every((value) => value > 0);
+    const xOnLog = scale === 'log' && allowLog && xValues.every((value) => value > 0);
     const xAxis = useMemo(
         () => (xOnLog ? axisForScale(xValues, 'log') : { domain: linearDomain(xValues), ticks: null }),
         [xOnLog, xValues],
@@ -73,37 +76,55 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
 
     const multiple = figure.series.length > 1;
 
-    const axes = (
-        <>
-            <CartesianGrid className='stroke-border' strokeDasharray='3 3' />
-            <XAxis
-                dataKey='x'
-                domain={xAxis.domain}
-                height={44}
-                label={{ value: figure.xLabel, position: 'insideBottom', offset: -2, fontSize: 11 }}
-                scale={xOnLog ? 'log' : 'linear'}
-                tick={AXIS_TICK}
-                tickFormatter={formatTick}
-                ticks={xAxis.ticks ?? undefined}
-                type='number'
-            />
-            <YAxis
-                domain={yAxis.domain}
-                label={{ value: figure.yLabel, angle: -90, position: 'insideLeft', fontSize: 11 }}
-                scale={scale}
-                tick={AXIS_TICK}
-                tickFormatter={formatTick}
-                ticks={yAxis.ticks ?? undefined}
-                type='number'
-                width={64}
-            />
-            <Tooltip
-                formatter={(value: number) => formatTick(value)}
-                labelFormatter={(value: number) => `${figure.xLabel}: ${formatTick(value)}`}
-            />
-            {multiple ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
-        </>
-    );
+    const axisElements = () => [
+        <CartesianGrid key='grid' stroke='var(--border)' strokeDasharray='3 3' />,
+        <XAxis
+            dataKey='x'
+            domain={xAxis.domain}
+            height={44}
+            key='x'
+            label={{
+                value: axisTitle(figure.x),
+                position: 'insideBottom',
+                offset: -2,
+                fontSize: 11,
+                fill: 'var(--muted-foreground)',
+            }}
+            scale={xOnLog ? 'log' : 'linear'}
+            stroke='var(--border)'
+            tick={AXIS_TICK}
+            tickFormatter={formatTick}
+            tickLine={{ stroke: 'var(--border)' }}
+            ticks={xAxis.ticks ?? undefined}
+            type='number'
+        />,
+        <YAxis
+            domain={yAxis.domain}
+            key='y'
+            label={{
+                value: axisTitle(figure.y),
+                angle: -90,
+                position: 'insideLeft',
+                fontSize: 11,
+                fill: 'var(--muted-foreground)',
+            }}
+            scale={scale}
+            stroke='var(--border)'
+            tick={AXIS_TICK}
+            tickFormatter={formatTick}
+            tickLine={{ stroke: 'var(--border)' }}
+            ticks={yAxis.ticks ?? undefined}
+            type='number'
+            width={64}
+        />,
+        <Tooltip
+            contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', fontSize: 11 }}
+            formatter={(value: number) => formatTick(value)}
+            key='tooltip'
+            labelFormatter={(value: number) => `${axisTitle(figure.x)}: ${formatTick(value)}`}
+        />,
+        ...(multiple ? [<Legend key='legend' wrapperStyle={{ fontSize: 11 }} />] : []),
+    ];
 
     return (
         <figure className='space-y-1'>
@@ -133,9 +154,9 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
 
             <div className='h-56 w-full'>
                 <ResponsiveContainer height='100%' width='100%'>
-                    {figure.kind === 'bar' ? (
+                    {figure.template === 'compare' ? (
                         <BarChart data={rows}>
-                            {axes}
+                            {axisElements()}
                             {figure.series.map((series, index) => (
                                 <Bar
                                     dataKey={`series${index}`}
@@ -145,9 +166,9 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
                                 />
                             ))}
                         </BarChart>
-                    ) : figure.kind === 'scatter' ? (
+                    ) : figure.template === 'scatter' ? (
                         <ScatterChart>
-                            {axes}
+                            {axisElements()}
                             {figure.series.map((series, index) => (
                                 <Scatter
                                     data={series.points}
@@ -159,7 +180,7 @@ export const LessonFigure = ({ figure }: { figure: Figure }) => {
                         </ScatterChart>
                     ) : (
                         <LineChart data={rows}>
-                            {axes}
+                            {axisElements()}
                             {figure.series.map((series, index) => (
                                 <Line
                                     dataKey={`series${index}`}

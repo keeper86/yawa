@@ -214,9 +214,9 @@ describe('repairBead', () => {
 
 describe('planLesson figures', () => {
     const figure = {
-        kind: 'line',
-        xLabel: 'Schrittweite h',
-        yLabel: 'Fehler',
+        template: 'trend',
+        x: { label: 'Schrittweite', unit: 'm' },
+        y: { label: 'Fehler', unit: 'm^2' },
         caption: 'Halbieren von h viertelt den Fehler.',
         series: [
             {
@@ -277,6 +277,40 @@ describe('planLesson figures', () => {
         expect(planned.beads).toHaveLength(1);
         expect(planned.beads[0].figure).toBeNull();
         expect(planned.beads[0].kind).toBe('choice');
+    });
+
+    it('keeps a figure whose axes carry a label but no unit', async () => {
+        const input = await prepare();
+        const labelOnly = {
+            beads: [
+                {
+                    kind: 'choice',
+                    idea: 'Ohne Einheit bleibt die Beschriftung deutbar.',
+                    question: 'Was zeigen die Punkte?',
+                    figure: {
+                        template: 'trend',
+                        x: { label: 'Schrittweite h' },
+                        y: { label: 'Fehler' },
+                        caption: 'Halbieren von h viertelt den Fehler.',
+                        series: figure.series,
+                    },
+                    options: [
+                        { text: 'Der Fehler viertelt sich.', correct: true, why: '' },
+                        { text: 'Der Fehler halbiert sich.', correct: false, why: 'Verwechselt h mit h^2.' },
+                        { text: 'Der Fehler bleibt gleich.', correct: false, why: 'Ignoriert die Zahlen.' },
+                    ],
+                },
+            ],
+        };
+        const ai = createFakeProvider({ structured: () => labelOnly });
+
+        const planned = await planLesson(ai, { ...input, diagnosis });
+
+        expect(planned.beads[0].figure).toEqual({
+            ...labelOnly.beads[0].figure,
+            x: { label: 'Schrittweite h', unit: '' },
+            y: { label: 'Fehler', unit: '' },
+        });
     });
 
     it('drops a figure with a repeated x value but keeps the bead', async () => {

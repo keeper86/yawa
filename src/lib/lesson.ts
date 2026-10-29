@@ -21,12 +21,17 @@ export const figureSeriesSchema = z.object({
     points: z.array(figurePointSchema).min(2).max(40),
 });
 
+export const figureAxisSchema = z.object({
+    label: z.string().min(1).max(40),
+    unit: z.string().max(20).default(''),
+});
+
 export const figureSchema = z.object({
-    kind: z.enum(['line', 'bar', 'scatter']),
-    xLabel: z.string().min(1).max(60),
-    yLabel: z.string().min(1).max(60),
+    template: z.enum(['trend', 'compare', 'scatter']),
+    x: figureAxisSchema,
+    y: figureAxisSchema,
     caption: z.string().min(1).max(300),
-    series: z.array(figureSeriesSchema).min(1).max(3),
+    series: z.array(figureSeriesSchema).min(1).max(2),
 });
 
 export const choiceBeadSchema = z.object({
@@ -59,6 +64,7 @@ export type Option = z.infer<typeof optionSchema>;
 export type ChoiceBead = z.infer<typeof choiceBeadSchema>;
 export type OpenBead = z.infer<typeof openBeadSchema>;
 export type Figure = z.infer<typeof figureSchema>;
+export type FigureAxis = z.infer<typeof figureAxisSchema>;
 export type FigureSeries = z.infer<typeof figureSeriesSchema>;
 export type Bead = z.infer<typeof beadSchema>;
 export type Lesson = z.infer<typeof lessonSchema>;

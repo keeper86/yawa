@@ -85,17 +85,32 @@ The rule that makes this work is local: the check of a bead is answerable from t
 
 ### Figures
 
-A bead may carry a figure, because some arguments live in the numbers: two series to compare, a trend, the effect of one parameter. The schema is deliberately small — `kind` (`line`, `bar`, `scatter`), axis labels, a caption and at most three series of at most forty points. The prompt asks for a figure only when the argument is in the numbers, never for decoration and never for a single value, and `figure: null` otherwise. Against the trapezoid act the model attached one figure, to the numeric bead, with the numbers it had already used in the idea — which is the behaviour the rule asks for.
+A bead may carry a figure, because some arguments live in the numbers: two series to compare, a trend, the effect of one parameter. The interface is deliberately narrow — the model names a **template**, not a chart:
 
-A figure is dropped, never fatal. If a series repeats an x value the chart cannot draw, `planLesson` sets that bead's `figure` to null and keeps the bead: a bad chart must not cost the learner the step. The schema rejects the rest before that (kinds, label lengths, point counts), and a plan that fails the schema still falls back to the act as a whole.
+```ts
+{ template: 'trend' | 'compare' | 'scatter',
+  x: { label, unit }, y: { label, unit },
+  caption: string,
+  series: [{ label, points: [{ x, y }] }] }   // ≤ 2 series, ≤ 12 points
+```
+
+`trend` draws a line, `compare` draws bars over numeric categories, `scatter` draws individual measurements. Units are their own field and a dimensionless quantity gets `1`, so an axis cannot be left unlabelled by omission — the renderer drops the parenthetical for `1`.
+
+Three findings worth keeping:
+
+- **A fragment is invisible to recharts.** Passing the axis children as `<>...</>` compiled, rendered a curve, and silently dropped the axes, the grid, the tooltip and the tick labels — because recharts scans `props.children` for known child types and a fragment hides them. Axis elements are now an array, and `LessonFigure.test.tsx` asserts that axis ticks and grid lines actually exist. A chart test that only checks for a path would have passed a broken chart.
+- **A nested schema makes the model stop charting.** Moving from `kind` to `template` with `x`/`y` objects silently took figures from 1-per-lesson to 0 — validation still passed, because `figure` defaults to null. Adding one literal example figure to the prompt brought it back. Narrowness has to be taught, not just enforced.
+- **A unit requirement that is too strict suppresses the feature.** Requiring a non-empty unit produced _zero_ figures: the model preferred dropping the figure over naming a unit. With `1` for dimensionless quantities and an example, it names units correctly.
+
+A figure is dropped, never fatal: a series that repeats an x value cannot be drawn, so `planLesson` sets that bead's `figure` to null and keeps the bead. Schema failures are different — they reject the plan into the act fallback, which is why the prompt carries the example.
 
 ### Scales
 
-Charts auto-scale and can switch to logarithms. `src/lib/chartAxis.ts` holds the pure rules, taken from the neighbouring PolyEconGame: `linearDomain` pads the value range by 8% and opens a window when every value is equal, `trimmedLogAxis` drops the two smallest and two largest magnitudes and offers a log scale only once the remaining spread exceeds one decade, and `planAxis` decides between the two — bars are never logged, because a log bar loses its length meaning. `axisForScale` re-anchors the domain when the learner flips the axis.
+Charts auto-scale and can switch to logarithms. `src/lib/chartAxis.ts` holds the pure rules, taken from the neighbouring PolyEconGame: `linearDomain` pads the value range by 8% and opens a window when every value is equal, `trimmedLogAxis` drops the two smallest and two largest magnitudes and offers a log scale only once the remaining spread exceeds one decade, and `planAxis` decides between the two — `compare` is never logged, because a log bar loses its length meaning. `axisForScale` re-anchors the domain when the learner flips the axis.
 
-The switch is the point, not a preference. On log axes a power law becomes a straight line, and that is exactly the observation the first trapezoid bead is fishing for: three points at 1/6, 1/24 and 1/96 look like a steep curve on linear axes and like a straight line on log axes. So the toggle is a mechanism the learner drives, offered only when every value is positive, and the hint above the chart says what to look for.
+The switch is the point, not a preference. On log axes a power law becomes a straight line, and that is exactly the observation the first trapezoid bead is fishing for. The toggle is offered only when every value is positive, and the hint above the chart says what to look for.
 
-Not there: no units check, so the model can label an axis wrongly without anything noticing; no per-series axis choice; and no chart for the tutor to _point at_ ("look at the middle point"). Those wait until figures carry real weight in a session.
+Not there: no per-series axis choice, no `highlight` so the tutor can point at a point, and no check that a unit is _correct_ — only that one exists.
 
 ### Answering
 
