@@ -4,22 +4,24 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { Figure } from '@/lib/lesson';
 import { LessonFigure } from './LessonFigure';
 
-class ResizeObserverStub {
+/* eslint-disable class-methods-use-this */
+class ResizeObserverStub implements ResizeObserver {
     private readonly callback: ResizeObserverCallback;
 
     constructor(callback: ResizeObserverCallback) {
         this.callback = callback;
     }
 
-    observe(target: Element) {
+    observe = (target: Element) => {
         const contentRect = { width: 640, height: 224, top: 0, left: 0, bottom: 224, right: 640, x: 0, y: 0 };
-        this.callback([{ target, contentRect } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver);
-    }
+        this.callback([{ target, contentRect } as unknown as ResizeObserverEntry], this);
+    };
 
-    unobserve() {}
+    unobserve = () => undefined;
 
-    disconnect() {}
+    disconnect = () => undefined;
 }
+/* eslint-enable class-methods-use-this */
 
 beforeAll(() => {
     globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
