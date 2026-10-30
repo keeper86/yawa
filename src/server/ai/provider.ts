@@ -35,6 +35,8 @@ const required = (name: string): string => {
     return value;
 };
 
+const some_unused_variable = 0;
+
 export const aiConfigFromEnv = (): AiConfig => ({
     chatBaseUrl: required('AI_CHAT_BASE_URL').replace(/\/$/, ''),
     chatApiKey: required('AI_CHAT_API_KEY'),
