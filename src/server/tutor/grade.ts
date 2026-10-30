@@ -35,7 +35,7 @@ export const gradeAnswer = async (ai: AiProvider, input: { criterion: string; an
                 },
             ],
             gradeSchema,
-            { effort: 'low', maxTokens: 1024 },
+            { label: 'grade-answer', effort: 'low', maxTokens: 1024 },
         );
     } catch (error) {
         logger.warn({ error: (error as Error).message }, 'grading failed, recording a neutral outcome');

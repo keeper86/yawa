@@ -105,6 +105,7 @@ describe('creation agent', () => {
         });
 
         expect(job.status).toBe('plan_ready');
+        expect(job.usage).toEqual({ calls: 1, inputTokens: 1, outputTokens: 1, reasoningTokens: 0, totalTokens: 2 });
         const acts = await getDb()('acts').where({ owner_user_id: owner, origin: 'generated' });
         expect(acts).toHaveLength(0);
     });
@@ -117,6 +118,8 @@ describe('creation agent', () => {
         const result = await runCreationJob(getDb(), ai, { jobId: job.id, userId: owner });
 
         expect(result).toEqual({ generated: 1, failed: 0 });
+        const stored = await getDb()('creation_jobs').where({ id: job.id }).first();
+        expect(stored?.usage).toMatchObject({ calls: 1 });
         const acts = await getDb()('acts').where({ owner_user_id: owner, origin: 'generated' });
         expect(acts).toHaveLength(1);
         expect(acts[0].status).toBe('proposed');

@@ -1,6 +1,6 @@
 import type { CreationJobs, Tables } from '@/types/db_schemas';
 import type { Knex } from 'knex';
-import type { AiProvider } from '../ai';
+import { type AiProvider, collectAiUsage } from '../ai';
 import { DomainFailure } from '../domainError';
 import { logger } from '../logger';
 import { linkConcepts } from '../graph/relations';
@@ -70,17 +70,20 @@ export const planLecture = async (
         .returning('*');
 
     try {
-        const draft = await ai.chatStructured(buildPlanMessages(toPlanContext(context)), planSchema, {
-            effort: 'high',
-            maxTokens: 16000,
-        });
+        const { result: draft, usage } = await collectAiUsage(() =>
+            ai.chatStructured(buildPlanMessages(toPlanContext(context)), planSchema, {
+                label: 'plan-lecture',
+                effort: 'high',
+                maxTokens: 16000,
+            }),
+        );
         const plan = validatePlan(draft, toPlanContext(context));
 
         await storeProposedPrerequisites(db, context, plan);
 
         const [updated] = await db('creation_jobs')
             .where({ id: job.id })
-            .update({ status: 'plan_ready', plan, updated_at: new Date() })
+            .update({ status: 'plan_ready', plan, usage, updated_at: new Date() })
             .returning('*');
 
         return updated;
@@ -112,36 +115,41 @@ export const runCreationJob = async (
 
     await db('creation_jobs').where({ id: job.id }).update({ status: 'generating', updated_at: new Date() });
 
-    let generated = 0;
-    let failed = 0;
-    const failures: string[] = [];
+    const { result, usage } = await collectAiUsage(async () => {
+        let generated = 0;
+        let failed = 0;
+        const failures: string[] = [];
 
-    for (const unit of units) {
-        try {
-            await generateActDraft(db, ai, context, unit);
-            generated += 1;
-        } catch (error) {
-            failed += 1;
-            failures.push(`${unit.conceptSlug}/${unit.templateKey}: ${(error as Error).message}`);
-            logger.warn({ unit: unit.conceptSlug, error: (error as Error).message }, 'act generation failed');
+        for (const unit of units) {
+            try {
+                await generateActDraft(db, ai, context, unit);
+                generated += 1;
+            } catch (error) {
+                failed += 1;
+                failures.push(`${unit.conceptSlug}/${unit.templateKey}: ${(error as Error).message}`);
+                logger.warn({ unit: unit.conceptSlug, error: (error as Error).message }, 'act generation failed');
+            }
         }
-    }
 
-    if (generated > 0) {
-        try {
-            await embedPendingActs(db, ai, { ownerUserId: context.lecture.owner_user_id });
-        } catch (error) {
-            logger.warn({ error: (error as Error).message }, 'embedding after generation failed');
+        if (generated > 0) {
+            try {
+                await embedPendingActs(db, ai, { ownerUserId: context.lecture.owner_user_id });
+            } catch (error) {
+                logger.warn({ error: (error as Error).message }, 'embedding after generation failed');
+            }
         }
-    }
+
+        return { generated, failed, failures };
+    });
 
     await db('creation_jobs')
         .where({ id: job.id })
         .update({
-            status: failed === units.length && units.length > 0 ? 'failed' : 'completed',
-            error: failures.length > 0 ? failures.join(' | ').slice(0, 2000) : null,
+            status: result.failed === units.length && units.length > 0 ? 'failed' : 'completed',
+            error: result.failures.length > 0 ? result.failures.join(' | ').slice(0, 2000) : null,
+            usage,
             updated_at: new Date(),
         });
 
-    return { generated, failed };
+    return { generated: result.generated, failed: result.failed };
 };

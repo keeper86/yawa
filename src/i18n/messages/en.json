@@ -365,6 +365,7 @@
             "template": "Template",
             "rationale": "Rationale",
             "passages": "Passages",
+            "usage": "{calls, plural, one {# model call} other {# model calls}} · {input} in / {output} out",
             "result": "{generated} generated, {failed} failed",
             "none": "No plan yet.",
             "error": "The last job failed"

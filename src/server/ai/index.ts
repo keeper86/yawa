@@ -1,15 +1,15 @@
-import { createOpenAiCompatibleProvider } from './openAiCompatible';
 import { type AiProvider, aiConfigFromEnv } from './provider';
+import { createAiProvider } from './sdk';
 
 export { createFakeProvider } from './fake';
-export { createOpenAiCompatibleProvider } from './openAiCompatible';
+export { createAiProvider } from './sdk';
 export * from './provider';
 
 let cached: AiProvider | null = null;
 
 export const getAi = (): AiProvider => {
     if (!cached) {
-        cached = createOpenAiCompatibleProvider(aiConfigFromEnv());
+        cached = createAiProvider(aiConfigFromEnv());
     }
     return cached;
 };

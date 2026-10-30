@@ -126,6 +126,7 @@ export type CreationJobs = {
     error: string | null;
     created_at: Date;
     updated_at: Date;
+    usage: unknown | null;
 };
 
 export type KnexMigrations = {

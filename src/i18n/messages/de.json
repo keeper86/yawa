@@ -365,6 +365,7 @@
             "template": "Muster",
             "rationale": "Begruendung",
             "passages": "Passagen",
+            "usage": "{calls, plural, one {# Modellaufruf} other {# Modellaufrufe}} · {input} ein / {output} aus",
             "result": "{generated} erzeugt, {failed} fehlgeschlagen",
             "none": "Noch kein Plan.",
             "error": "Der letzte Auftrag ist fehlgeschlagen"

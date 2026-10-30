@@ -29,6 +29,7 @@ CREATE TABLE creation_jobs (
                                     CHECK (status IN ('planning', 'plan_ready', 'generating', 'completed', 'failed')),
     plan                JSONB,
     error               TEXT,
+    usage               JSONB,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -36,6 +37,8 @@ CREATE INDEX idx_creation_jobs_lecture ON creation_jobs (lecture_id, created_at 
 ```
 
 One active job per lecture, enforced in the controller (`lectureNotFound`-style guard: `creationJobActive`).
+
+`usage` is the token total of the job (`{ calls, inputTokens, outputTokens, reasoningTokens, totalTokens }`), written by `collectAiUsage` around the plan call and around the whole generation loop — see chunk 11. The plan tab prints it next to the status, so the price of a lecture is visible before anyone asks why a job took a minute.
 
 ## Phase 1 — plan
 

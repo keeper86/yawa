@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 import type { z } from 'zod';
 import { DomainFailure } from '../domainError';
 import { type AiProvider, type ChatMessage, type ChatOptions } from './provider';
+import { recordAiUsage } from './usage';
 
 export type FakeProviderOptions = {
     embeddings?: Map<string, number[]>;
-    chat?: (messages: ChatMessage[], options: ChatOptions) => string;
     structured?: (messages: ChatMessage[], options: ChatOptions) => unknown;
     embeddingDim?: number;
 };
@@ -35,16 +35,18 @@ export const createFakeProvider = (options: FakeProviderOptions = {}): AiProvide
         embeddingModel: 'fake-embedding',
         embeddingDim: dimensions,
 
-        chat: async (messages, chatOptions = {}) => {
+        chatStructured: async <T>(messages: ChatMessage[], schema: z.ZodType<T>, chatOptions: ChatOptions) => {
             calls.push(messages);
-            if (!options.chat) {
-                throw new DomainFailure('aiInvalidResponse', 'The fake provider was asked for chat without a handler');
-            }
-            return options.chat(messages, chatOptions);
-        },
-
-        chatStructured: async <T>(messages: ChatMessage[], schema: z.ZodType<T>, chatOptions: ChatOptions = {}) => {
-            calls.push(messages);
+            recordAiUsage({
+                label: chatOptions.label,
+                model: 'fake-chat',
+                finishReason: 'stop',
+                inputTokens: 1,
+                outputTokens: 1,
+                reasoningTokens: 0,
+                totalTokens: 2,
+                ms: 0,
+            });
             if (!options.structured) {
                 throw new DomainFailure('aiInvalidResponse', 'The fake provider was asked for JSON without a handler');
             }

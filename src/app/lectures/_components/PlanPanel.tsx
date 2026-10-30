@@ -16,6 +16,8 @@ type PlanUnit = {
     sourceSectionIds: string[];
 };
 
+const formatTokens = (value: number) => (value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value));
+
 const readUnits = (plan: unknown): PlanUnit[] => {
     if (typeof plan !== 'object' || plan === null || !('units' in plan)) {
         return [];
@@ -59,6 +61,15 @@ export const PlanPanel = ({ lectureId }: { lectureId: string }) => {
                     {generate.isPending ? t('generating') : t('generate')}
                 </Button>
                 {job ? <Badge variant='secondary'>{job.status}</Badge> : null}
+                {job?.usage ? (
+                    <span className='text-xs text-muted-foreground'>
+                        {t('usage', {
+                            calls: job.usage.calls,
+                            input: formatTokens(job.usage.inputTokens),
+                            output: formatTokens(job.usage.outputTokens),
+                        })}
+                    </span>
+                ) : null}
             </div>
 
             {job?.error ? <p className='text-sm text-destructive'>{job.error}</p> : null}

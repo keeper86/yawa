@@ -124,7 +124,7 @@ export const generateActDraft = async (
             exemplars.map((exemplar) => ({ title: exemplar.title, script: exemplar.script as Script })),
         ),
         generatedSchema(definition.scriptSchema),
-        { effort: 'high', maxTokens: 16000 },
+        { label: 'generate-act', effort: 'high', maxTokens: 16000 },
     );
 
     const text = actText({ title: output.title, script: output.script });

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { briefSchema } from '@/lib/lectureBrief';
 import type { Lectures } from '@/types/db_schemas';
-import { getAi } from '../ai';
+import { aiUsageTotalsSchema, getAi } from '../ai';
 import { planLecture, runCreationJob } from '../agent/jobs';
 import { db } from '../db';
 import { DomainFailure } from '../domainError';
@@ -238,6 +238,7 @@ export const latestJob = () =>
                     status: z.string(),
                     plan: z.unknown(),
                     error: z.string().nullable(),
+                    usage: aiUsageTotalsSchema.nullable(),
                 })
                 .nullable(),
         )
@@ -249,7 +250,17 @@ export const latestJob = () =>
                 .where({ lecture_id: input.lectureId })
                 .orderBy('created_at', 'desc')
                 .first();
-            return job ? { jobId: job.id, status: job.status, plan: job.plan, error: job.error } : null;
+            if (!job) {
+                return null;
+            }
+            const usage = aiUsageTotalsSchema.safeParse(job.usage);
+            return {
+                jobId: job.id,
+                status: job.status,
+                plan: job.plan,
+                error: job.error,
+                usage: usage.success ? usage.data : null,
+            };
         });
 
 export const publish = () =>

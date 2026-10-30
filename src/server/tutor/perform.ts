@@ -146,6 +146,7 @@ const sanitizeBead = (bead: Bead): Bead => {
 export const planLesson = async (ai: AiProvider, input: PlanInput): Promise<Lesson> => {
     try {
         const lesson = await ai.chatStructured(planMessages(input), strictLessonSchema, {
+            label: 'plan-lesson',
             effort: 'high',
             maxTokens: 16000,
         });
@@ -157,7 +158,11 @@ export const planLesson = async (ai: AiProvider, input: PlanInput): Promise<Less
 
 export const repairBead = async (ai: AiProvider, input: RepairInput): Promise<string> => {
     try {
-        const repair = await ai.chatStructured(repairMessages(input), repairSchema, { effort: 'low', maxTokens: 8000 });
+        const repair = await ai.chatStructured(repairMessages(input), repairSchema, {
+            label: 'repair-bead',
+            effort: 'low',
+            maxTokens: 8000,
+        });
         return repair.text;
     } catch {
         return fallbackRepair({ why: input.chosen.why, idea: input.bead.idea });

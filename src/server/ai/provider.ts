@@ -3,14 +3,14 @@ import type { z } from 'zod';
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export type ChatOptions = {
+    label: string;
     maxTokens?: number;
     temperature?: number;
     effort?: 'low' | 'high' | 'max';
 };
 
 export type AiProvider = {
-    chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>;
-    chatStructured<T>(messages: ChatMessage[], schema: z.ZodType<T>, options?: ChatOptions): Promise<T>;
+    chatStructured<T>(messages: ChatMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T>;
     embed(texts: string[]): Promise<number[][]>;
     readonly embeddingModel: string;
     readonly embeddingDim: number;
@@ -47,3 +47,5 @@ export const aiConfigFromEnv = (): AiConfig => ({
 export const DEFAULT_GENERATION_TOKENS = 16000;
 export const DEFAULT_GRADING_TOKENS = 1024;
 export const MAX_EMBEDDING_BATCH = 32;
+
+export * from './usage';
