@@ -3,6 +3,7 @@
 
 export enum Table {
     ActGrounding = 'act_grounding',
+    ActLessons = 'act_lessons',
     ActReferences = 'act_references',
     ActTemplateQuality = 'act_template_quality',
     Acts = 'acts',
@@ -30,6 +31,7 @@ export enum Table {
 
 export type Tables = {
     act_grounding: ActGrounding;
+    act_lessons: ActLessons;
     act_references: ActReferences;
     act_template_quality: ActTemplateQuality;
     acts: Acts;
@@ -58,6 +60,16 @@ export type Tables = {
 export type ActGrounding = {
     act_id: string;
     source_section_id: string;
+};
+
+export type ActLessons = {
+    id: string;
+    act_id: string;
+    content_hash: string;
+    bucket: string;
+    model: string;
+    beads: unknown;
+    created_at: Date;
 };
 
 export type ActReferences = {

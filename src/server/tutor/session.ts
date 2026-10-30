@@ -9,7 +9,10 @@ import type { Script } from '../templates';
 import { diagnose, pickGoalConcept } from './diagnose';
 import { gradeAnswer } from './grade';
 import { updateMastery } from './mastery';
-import { planLesson, repairBead } from './perform';
+import { logger } from '../logger';
+import { planLessonOutcome, repairBead } from './perform';
+import { masteryBucket } from '@/lib/lessonBucket';
+import { readLesson, writeLesson } from './planCache';
 
 const MAX_ATTEMPTS = 2;
 const CORRECT_AT = 0.7;
@@ -120,11 +123,29 @@ export const nextAct = async (
         throw new DomainFailure('conceptNotFound', 'Concept not found');
     }
 
-    const lesson = await planLesson(ai, {
-        act: { id: act.id, title: act.title, script: act.script as Script },
-        concept: { title: concept.title, summary: concept.summary, language: concept.language },
-        diagnosis,
-    });
+    const bucket = masteryBucket(diagnosis.mastery);
+    const planStarted = Date.now();
+    const cachedBeads = await readLesson(db, act, bucket);
+
+    let beads: Bead[];
+    if (cachedBeads === null) {
+        const planned = await planLessonOutcome(ai, {
+            act: { id: act.id, title: act.title, script: act.script as Script },
+            concept: { title: concept.title, summary: concept.summary, language: concept.language },
+            diagnosis,
+        });
+        beads = planned.lesson.beads;
+        if (planned.fromModel) {
+            await writeLesson(db, act, bucket, beads, ai.model);
+        }
+    } else {
+        beads = cachedBeads;
+    }
+
+    logger.info(
+        { actId: act.id, bucket, cached: cachedBeads !== null, planMs: Date.now() - planStarted, beads: beads.length },
+        'tutor lesson ready',
+    );
 
     const [turn] = await db('turns')
         .insert({
@@ -132,7 +153,7 @@ export const nextAct = async (
             seq: await nextSeq(db, session.id),
             role: 'agent',
             act_id: act.id,
-            content: { actId: act.id, title: act.title, beads: lesson.beads },
+            content: { actId: act.id, title: act.title, beads },
             retrieval: {
                 chosen: chosen.actId,
                 score: chosen.score,
@@ -148,7 +169,7 @@ export const nextAct = async (
         turnId: turn.id,
         actId: act.id,
         title: act.title,
-        beads: lesson.beads,
+        beads,
         retrieval: turn.retrieval,
     };
 };

@@ -250,6 +250,82 @@ describe('session loop', () => {
         return { goal, session, turn };
     };
 
+    it('serves a second turn for the same act from the cache', async () => {
+        const { concept: goal } = await setupAct();
+        const session = await startSession(getDb(), {
+            userId: learner,
+            goalConceptId: goal.id,
+            mode: 'study',
+            lectureId: null,
+        });
+        const first = await nextAct(getDb(), tutor(twoBeads), { sessionId: session.id, userId: learner, query: QUERY });
+
+        let planCalls = 0;
+        const counting: AiProvider = createFakeProvider({
+            embeddingDim: 768,
+            embeddings: new Map([[QUERY, embedding(0)]]),
+            structured: (messages) => {
+                if (messages[0].content.includes('short interactive lesson')) {
+                    planCalls += 1;
+                    return twoBeads;
+                }
+                return { score: 0.9, substantive: true, reason: 'stimmt' };
+            },
+        });
+        const second = await nextAct(getDb(), counting, { sessionId: session.id, userId: learner, query: QUERY });
+
+        expect(second.beads).toEqual(first.beads);
+        expect(planCalls).toBe(0);
+    });
+
+    it('plans again for a learner who moved into another mastery bucket', async () => {
+        const { concept: goal } = await setupAct();
+        const session = await startSession(getDb(), {
+            userId: learner,
+            goalConceptId: goal.id,
+            mode: 'study',
+            lectureId: null,
+        });
+        await nextAct(getDb(), tutor(twoBeads), { sessionId: session.id, userId: learner, query: QUERY });
+
+        await getDb()('learner_concept_state')
+            .insert({ user_id: learner, concept_id: goal.id, mastery: 0.9, confidence: 0.9, evidence_count: 5 })
+            .onConflict(['user_id', 'concept_id'])
+            .merge({ mastery: 0.9, confidence: 0.9, evidence_count: 5, updated_at: new Date() });
+
+        let planCalls = 0;
+        const counting: AiProvider = createFakeProvider({
+            embeddingDim: 768,
+            embeddings: new Map([[QUERY, embedding(0)]]),
+            structured: (messages) => {
+                if (messages[0].content.includes('short interactive lesson')) {
+                    planCalls += 1;
+                    return twoBeads;
+                }
+                return { score: 0.9, substantive: true, reason: 'stimmt' };
+            },
+        });
+        await nextAct(getDb(), counting, { sessionId: session.id, userId: learner, query: QUERY });
+
+        expect(planCalls).toBe(1);
+    });
+
+    it('does not cache the fallback lesson', async () => {
+        const { concept: goal } = await setupAct();
+        const session = await startSession(getDb(), {
+            userId: learner,
+            goalConceptId: goal.id,
+            mode: 'study',
+            lectureId: null,
+        });
+        const fallback = await nextAct(getDb(), ai(), { sessionId: session.id, userId: learner, query: QUERY });
+
+        const stored = await getDb()('act_lessons').where({ act_id: fallback.actId });
+
+        expect(fallback.beads).toHaveLength(1);
+        expect(stored).toHaveLength(0);
+    });
+
     it('presents the act as one open step when the model cannot plan', async () => {
         const { concept: goal } = await setupAct();
         const session = await startSession(getDb(), {

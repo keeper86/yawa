@@ -12,6 +12,7 @@ export type ChatOptions = {
 export type AiProvider = {
     chatStructured<T>(messages: ChatMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T>;
     embed(texts: string[]): Promise<number[][]>;
+    readonly model: string;
     readonly embeddingModel: string;
     readonly embeddingDim: number;
 };

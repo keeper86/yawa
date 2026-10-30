@@ -4,9 +4,11 @@ import { LessonFigure } from '@/components/charts/LessonFigure';
 import { Page } from '@/components/client/Page';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useElapsedSeconds } from '@/hooks/useElapsedSeconds';
 import { useAnswerChoice, useAnswerOpen, useCloseSession, useNextAct, useStartSession } from '@/hooks/useTutor';
 import { useErrorMessage } from '@/i18n/errors';
 import type { Bead } from '@/lib/lesson';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -78,6 +80,8 @@ export default function TutorPage() {
     const [empty, setEmpty] = useState(false);
 
     const bead = turn?.beads[index] ?? null;
+    const preparing = start.isPending || next.isPending;
+    const preparingSeconds = useElapsedSeconds(preparing);
 
     const begin = () => {
         start.mutate(
@@ -191,7 +195,22 @@ export default function TutorPage() {
         >
             <p className='pb-4 text-muted-foreground'>{t('subtitle')}</p>
 
-            {sessionId === null ? (
+            {preparing ? (
+                <Card className='mb-4'>
+                    <CardContent className='flex items-center gap-3 py-5'>
+                        <Loader2 className='size-4 animate-spin text-muted-foreground' />
+                        <div>
+                            <p className='text-sm font-medium'>{t('preparing')}</p>
+                            <p className='text-xs text-muted-foreground'>{t('preparingHint')}</p>
+                        </div>
+                        <span className='ml-auto text-xs tabular-nums text-muted-foreground'>
+                            {t('preparingSeconds', { seconds: preparingSeconds })}
+                        </span>
+                    </CardContent>
+                </Card>
+            ) : null}
+
+            {sessionId === null && !preparing ? (
                 <Card>
                     <CardHeader>
                         <CardTitle className='text-base'>{t('start')}</CardTitle>
@@ -216,7 +235,7 @@ export default function TutorPage() {
                 </Card>
             ) : null}
 
-            {turn && bead ? (
+            {turn && bead && !preparing ? (
                 <div className='grid gap-4 lg:grid-cols-[2fr_1fr]'>
                     <Card>
                         <CardHeader className='flex-row items-center justify-between space-y-0'>
@@ -233,6 +252,12 @@ export default function TutorPage() {
                                 </div>
                             )}
                             <p className='text-sm font-medium leading-relaxed'>{bead.question}</p>
+                            {busy ? (
+                                <p className='flex items-center gap-2 text-xs text-muted-foreground'>
+                                    <Loader2 className='size-3 animate-spin' />
+                                    {t('checking')}
+                                </p>
+                            ) : null}
                             {bead.kind === 'choice' ? (
                                 <div className='space-y-2'>
                                     {bead.options.map((option, optionIndex) => (

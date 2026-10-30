@@ -111,6 +111,7 @@ export const createAiProvider = (config: AiConfig, fetchImpl: FetchLike = fetch)
     };
 
     return {
+        model: config.chatModel,
         embeddingModel: config.embeddingModel,
         embeddingDim: config.embeddingDim,
 

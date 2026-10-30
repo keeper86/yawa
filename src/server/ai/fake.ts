@@ -32,6 +32,7 @@ export const createFakeProvider = (options: FakeProviderOptions = {}): AiProvide
 
     return {
         calls,
+        model: 'fake-chat',
         embeddingModel: 'fake-embedding',
         embeddingDim: dimensions,
 

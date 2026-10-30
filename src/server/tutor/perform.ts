@@ -143,18 +143,23 @@ const sanitizeBead = (bead: Bead): Bead => {
     return { kind: 'open', idea: bead.idea, question: bead.question, expects: bead.expects, figure };
 };
 
-export const planLesson = async (ai: AiProvider, input: PlanInput): Promise<Lesson> => {
+export type PlanOutcome = { lesson: Lesson; fromModel: boolean };
+
+export const planLessonOutcome = async (ai: AiProvider, input: PlanInput): Promise<PlanOutcome> => {
     try {
         const lesson = await ai.chatStructured(planMessages(input), strictLessonSchema, {
             label: 'plan-lesson',
             effort: 'high',
             maxTokens: 16000,
         });
-        return { beads: lesson.beads.map(sanitizeBead) };
+        return { lesson: { beads: lesson.beads.map(sanitizeBead) }, fromModel: true };
     } catch {
-        return fallbackLesson({ title: input.act.title, script: input.act.script });
+        return { lesson: fallbackLesson({ title: input.act.title, script: input.act.script }), fromModel: false };
     }
 };
+
+export const planLesson = async (ai: AiProvider, input: PlanInput): Promise<Lesson> =>
+    (await planLessonOutcome(ai, input)).lesson;
 
 export const repairBead = async (ai: AiProvider, input: RepairInput): Promise<string> => {
     try {

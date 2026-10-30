@@ -135,6 +135,24 @@ The reaction turns carry `act_id` as well, so the active lesson is found by `jso
 
 The plan is produced in one call per act; nothing is cached, and a full plan costs roughly 30 seconds and 15 k reasoning characters. The next steps, in order: cache plans per act and mastery bucket, let the tutor add a bead mid-lesson when a repair suggests the idea needs a second angle, and only then give the tutor real tools (hint on request, figure, step reveal) instead of a fixed chain.
 
+## Why the first turn takes most of a minute
+
+`nextAct` does two things: it retrieves an act (one embedding call, a few ms of SQL) and then asks the model to rewrite that act as beads. Measured against `deepseek-flash`: **44.8 s of a 44.9 s turn was the plan call**. Retrieval, diagnosis and the turn insert are noise next to it. The split is in the log as `planMs` beside `ai usage ... ms`, so the next person does not have to guess which half to optimise.
+
+Two consequences, both handled:
+
+- **The plan is cached.** `act_lessons` stores beads under `(act_id, content_hash, bucket)`, where the bucket comes from `masteryBucket(diagnosis.mastery)` — `novice` below 0.4, `developing` below 0.75, `fluent` above. A second turn on the same act takes **60 ms** (`cached: true`, `planMs: 5`).
+
+    Three deliberate properties. A changed act gets a new `content_hash` and therefore a new plan. A learner who moved a bucket pays for a new plan, because bead count and step size are pedagogy, not boilerplate — this is why the cache is not keyed on the act alone. And a **fallback** lesson is never cached: when the model fails, the bare act outline is served once, but the database does not freeze that failure into every later turn.
+
+    Stored beads are re-validated with `beadsSchema` on read. A payload that no longer parses (an old schema, a hand-edited row) is logged, dropped and replaced, instead of throwing inside a turn.
+
+- **The wait is visible.** The tutor page renders a preparing card with a spinner and elapsed seconds from the moment the mutation starts, and hides the previous act while it runs. A 45 s wait that looks like a hung page is a bug even when the server is healthy; the hint names the reason and says later visits come from the cache, because that is what happens.
+
+Effort is not the lever it looks like. Three runs with `reasoningEffort: 'low'` took 29 s, 88 s and 36 s for the same shape (5 beads, 4–5 choice, 1–2 figures); one run with `high` took 71 s for the same shape on another act. The spread is the endpoint queueing, not our settings. The plan call therefore keeps `high`, and the cache absorbs the latency instead of a knob that only looks like one.
+
+Not done: prewarming. A publish could plan lessons for its acts in the background so even the first learner skips the wait, at roughly 10 k tokens per act. That is a cost decision, not a technical one.
+
 ## Choosing the goal concept
 
 Explicit when the learner picked one. Otherwise `need = (1 - mastery) * (0.3 + 0.7 * confidence)` over concepts that have at least one visible, embedded act, highest first. A concept nobody teaches is not a goal; it is a gap for the creator.
