@@ -1,4 +1,4 @@
-import { type LucideIcon, FileText, Home, KeyRound, Mail, User } from 'lucide-react';
+import { type LucideIcon, BookOpen, FileText, GraduationCap, Home, KeyRound, Mail, User } from 'lucide-react';
 import type { Route } from 'nextjs-routes';
 import type en from '../i18n/messages/en.json';
 
@@ -52,6 +52,18 @@ export const APP_ROUTES = {
         label: 'Messages',
         icon: Mail,
         isSecondaryNav: true,
+    },
+    lectures: {
+        path: '/lectures',
+        label: 'Lectures',
+        icon: BookOpen,
+        isMainNav: true,
+    },
+    tutor: {
+        path: '/tutor',
+        label: 'Tutor',
+        icon: GraduationCap,
+        isMainNav: true,
     },
     imprint: {
         path: '/imprint',

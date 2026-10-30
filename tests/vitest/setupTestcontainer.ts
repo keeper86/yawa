@@ -1,10 +1,11 @@
-import type { UserData } from '@/types/db_schemas';
+import type { Tables, UserData } from '@/types/db_schemas';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import knex from 'knex';
+import type { Knex } from 'knex';
 import { afterAll, beforeAll } from 'vitest';
 
 dotenvExpand.expand(dotenv.config());
@@ -33,7 +34,7 @@ export const testUsers: Record<string, UserData> = {
     },
 };
 
-let knexInstance: ReturnType<typeof knex> | undefined;
+let knexInstance: Knex<Tables> | undefined;
 let container: StartedPostgreSqlContainer | undefined;
 let appRouter: typeof import('@/server/router').appRouter | undefined;
 
@@ -108,7 +109,7 @@ async function getContainer(): Promise<StartedPostgreSqlContainer> {
     return container;
 }
 
-async function getKnexInstance(): Promise<ReturnType<typeof knex>> {
+async function getKnexInstance(): Promise<Knex<Tables>> {
     if (knexInstance) {
         return knexInstance;
     }
@@ -117,7 +118,7 @@ async function getKnexInstance(): Promise<ReturnType<typeof knex>> {
     const host = c.getHost();
     const port = c.getPort();
 
-    knexInstance = knex({
+    knexInstance = knex<Tables>({
         client: 'pg',
         connection: {
             host,

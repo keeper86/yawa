@@ -2,21 +2,143 @@
 // Do not touch them, or risk, your modifications being lost.
 
 export enum Table {
+    ActGrounding = 'act_grounding',
+    ActLessons = 'act_lessons',
+    ActReferences = 'act_references',
+    ActTemplateQuality = 'act_template_quality',
+    Acts = 'acts',
+    ConceptRelations = 'concept_relations',
+    Concepts = 'concepts',
+    CreationJobs = 'creation_jobs',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
+    LearnerConceptState = 'learner_concept_state',
+    LearnerEvidence = 'learner_evidence',
+    LectureActs = 'lecture_acts',
+    LectureConcepts = 'lecture_concepts',
+    LectureSources = 'lecture_sources',
+    Lectures = 'lectures',
     Messages = 'messages',
     PersonalAccessTokens = 'personal_access_tokens',
     PersonalAccessTokensLogs = 'personal_access_tokens_logs',
+    SourceSections = 'source_sections',
+    Sources = 'sources',
+    Templates = 'templates',
+    Turns = 'turns',
+    TutorSessions = 'tutor_sessions',
     UserData = 'user_data',
 }
 
 export type Tables = {
+    act_grounding: ActGrounding;
+    act_lessons: ActLessons;
+    act_references: ActReferences;
+    act_template_quality: ActTemplateQuality;
+    acts: Acts;
+    concept_relations: ConceptRelations;
+    concepts: Concepts;
+    creation_jobs: CreationJobs;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
+    learner_concept_state: LearnerConceptState;
+    learner_evidence: LearnerEvidence;
+    lecture_acts: LectureActs;
+    lecture_concepts: LectureConcepts;
+    lecture_sources: LectureSources;
+    lectures: Lectures;
     messages: Messages;
     personal_access_tokens: PersonalAccessTokens;
     personal_access_tokens_logs: PersonalAccessTokensLogs;
+    source_sections: SourceSections;
+    sources: Sources;
+    templates: Templates;
+    turns: Turns;
+    tutor_sessions: TutorSessions;
     user_data: UserData;
+};
+
+export type ActGrounding = {
+    act_id: string;
+    source_section_id: string;
+};
+
+export type ActLessons = {
+    id: string;
+    act_id: string;
+    content_hash: string;
+    bucket: string;
+    model: string;
+    beads: unknown;
+    created_at: Date;
+};
+
+export type ActReferences = {
+    act_id: string;
+    concept_id: string;
+};
+
+export type ActTemplateQuality = {
+    concept_id: string | null;
+    template_id: string | null;
+    template_key: string | null;
+    uses: string | null;
+    mean_outcome: number | null;
+    sessions: string | null;
+};
+
+export type Acts = {
+    id: string;
+    concept_id: string;
+    template_id: string;
+    template_version: number;
+    owner_user_id: string;
+    origin: string;
+    status: string;
+    title: string;
+    script: unknown;
+    script_text: string;
+    content_hash: string;
+    embedding: unknown | null;
+    embedding_model: string | null;
+    embedded_at: Date | null;
+    published_at: Date | null;
+    reviewed_by_user_id: string | null;
+    reviewed_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+};
+
+export type ConceptRelations = {
+    id: string;
+    source_concept_id: string;
+    target_concept_id: string;
+    type: string;
+    status: string;
+    created_by_user_id: string | null;
+    created_at: Date;
+};
+
+export type Concepts = {
+    id: string;
+    slug: string;
+    title: string;
+    language: string;
+    summary: string | null;
+    wikidata_qid: string | null;
+    created_by_user_id: string | null;
+    created_at: Date;
+};
+
+export type CreationJobs = {
+    id: string;
+    lecture_id: string;
+    requested_by_user_id: string;
+    status: string;
+    plan: unknown | null;
+    error: string | null;
+    created_at: Date;
+    updated_at: Date;
+    usage: unknown | null;
 };
 
 export type KnexMigrations = {
@@ -29,6 +151,54 @@ export type KnexMigrations = {
 export type KnexMigrationsLock = {
     index: number;
     is_locked: number | null;
+};
+
+export type LearnerConceptState = {
+    user_id: string;
+    concept_id: string;
+    mastery: number;
+    confidence: number;
+    evidence_count: number;
+    last_evidence_at: Date | null;
+    updated_at: Date;
+};
+
+export type LearnerEvidence = {
+    id: string;
+    user_id: string;
+    concept_id: string;
+    turn_id: string;
+    kind: string;
+    outcome: number;
+    created_at: Date;
+};
+
+export type LectureActs = {
+    lecture_id: string;
+    act_id: string;
+    position: number;
+};
+
+export type LectureConcepts = {
+    lecture_id: string;
+    concept_id: string;
+};
+
+export type LectureSources = {
+    lecture_id: string;
+    source_id: string;
+};
+
+export type Lectures = {
+    id: string;
+    owner_user_id: string;
+    title: string;
+    abstract: string;
+    language: string;
+    brief: Record<string, unknown>;
+    published_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
 };
 
 export type Messages = {
@@ -58,6 +228,66 @@ export type PersonalAccessTokensLogs = {
     used_at: Date;
     ip: string | null;
     user_agent: string | null;
+};
+
+export type SourceSections = {
+    id: string;
+    source_id: string;
+    position: number;
+    heading: string;
+    anchor: string | null;
+    content: string;
+    content_hash: string;
+};
+
+export type Sources = {
+    id: string;
+    owner_user_id: string | null;
+    kind: string;
+    external_id: string;
+    title: string;
+    language: string;
+    uri: string | null;
+    license: string;
+    license_url: string | null;
+    source_revision: string | null;
+    fetched_at: Date | null;
+    created_at: Date;
+};
+
+export type Templates = {
+    id: string;
+    key: string;
+    version: number;
+    name: string;
+    intent: string;
+    trigger: string;
+    brief_fields: string[];
+    rubric: string[];
+    status: string;
+    created_at: Date;
+};
+
+export type Turns = {
+    id: string;
+    session_id: string;
+    seq: number;
+    role: string;
+    act_id: string | null;
+    content: unknown;
+    retrieval: unknown | null;
+    outcome: number | null;
+    created_at: Date;
+};
+
+export type TutorSessions = {
+    id: string;
+    user_id: string;
+    goal_concept_id: string;
+    mode: string;
+    lecture_id: string | null;
+    created_at: Date;
+    closed_at: Date | null;
 };
 
 export type UserData = {

@@ -1,0 +1,262 @@
+{
+    "language": "de",
+    "source": {
+        "externalId": "paste:golden-skript-numerik",
+        "title": "Skript Numerische Integration",
+        "license": "own-work",
+        "sections": [
+            {
+                "heading": "Riemannsumme",
+                "content": "Die Riemannsumme zerlegt das Intervall in Teile und summiert Funktionswerte an ausgezeichneten Stellen, multipliziert mit der Breite des Teils. Sie konvergiert fuer stetige Funktionen gegen das Integral, sobald die Feinheit der Zerlegung gegen null geht, und ist der Ausgangspunkt aller Quadraturformeln."
+            },
+            {
+                "heading": "Trapezregel",
+                "content": "Die Trapezregel verbindet benachbarte Stuetzstellen durch Geraden und summiert die Flaechen der entstehenden Trapeze. Mit zwei Teilen der Breite Delta x gilt Delta x mal halbe Summe aus erstem und letztem Funktionswert plus dem mittleren Wert. Der Fehler faellt quadratisch mit der Schrittweite."
+            },
+            {
+                "heading": "Simpsonregel",
+                "content": "Die Simpsonregel legt durch je drei benachbarte Stuetzstellen eine Parabel und integriert diese exakt. Fuer Polynome bis zum Grad drei ist sie fehlerfrei, weil der Interpolationsfehler der Parabel bei der Integration verschwindet. Ihr Fehler faellt mit der vierten Potenz der Schrittweite."
+            },
+            {
+                "heading": "Stuetzstellen und Interpolation",
+                "content": "Stuetzstellen sind die Punkte, an denen die Funktion ausgewertet wird; dazwischen wird sie durch ein Polynom angenaehert. Gleichmaessig verteilte Stellen sind einfach, aber am Rand ungenau, waehrend Tschebyscheff-Stellen den maximalen Fehler gleichmaessig verteilen."
+            },
+            {
+                "heading": "Fehlerordnung",
+                "content": "Die Fehlerordnung beschreibt, wie schnell der Fehler mit kleinerer Schrittweite faellt. Halbiert man die Schrittweite und viertelt sich der Fehler, liegt quadratische Ordnung vor. Die Ordnung folgt aus der Taylorreihe des Integranden und der Zahl der Stuetzstellen pro Teilintervall."
+            },
+            {
+                "heading": "Extrapolation und Romberg",
+                "content": "Extrapolation kombiniert Naeherungen mit unterschiedlichen Schrittweiten und eliminiert den fuehrenden Fehlerterm. Das Romberg-Verfahren wendet das wiederholt auf die Trapezregel an und erreicht hohe Ordnung, ohne hoehere Ableitungen auszuwerten."
+            },
+            {
+                "heading": "Gauss-Quadratur",
+                "content": "Die Gauss-Quadratur waehlt Stuetzstellen und Gewichte so, dass Polynome moeglichst hohen Grades exakt integriert werden; mit n Stuetzstellen bis zum Grad zwei n minus eins. Der Preis sind ungleichmaessige Stuetzstellen und unanschauliche Gewichte."
+            },
+            {
+                "heading": "Rundungsfehler und Schrittweite",
+                "content": "Eine kleinere Schrittweite verringert den Verfahrensfehler, vergroessert aber den Einfluss von Rundungsfehlern, weil mehr Summanden addiert werden. Es gibt daher eine optimale Schrittweite, unterhalb derer der Gesamtfehler wieder steigt."
+            }
+        ]
+    },
+    "concepts": [
+        {
+            "slug": "numerische-integration",
+            "title": "Numerische Integration",
+            "summary": "Berechnung von Integralen mit endlich vielen Funktionswerten."
+        },
+        {
+            "slug": "riemannsumme",
+            "title": "Riemannsumme",
+            "summary": "Zerlegung in Teile mit Summe gewichteter Funktionswerte."
+        },
+        {
+            "slug": "trapezregel",
+            "title": "Trapezregel",
+            "summary": "Quadratur durch Trapezflaechen zwischen benachbarten Stuetzstellen."
+        },
+        {
+            "slug": "simpsonregel",
+            "title": "Simpsonregel",
+            "summary": "Quadratur durch Parabeln durch je drei Stuetzstellen."
+        },
+        { "slug": "stuetzstelle", "title": "Stuetzstelle", "summary": "Punkt, an dem der Integrand ausgewertet wird." },
+        {
+            "slug": "interpolation",
+            "title": "Interpolation",
+            "summary": "Annaeherung einer Funktion zwischen Stuetzstellen durch ein Polynom."
+        },
+        {
+            "slug": "fehlerordnung",
+            "title": "Fehlerordnung",
+            "summary": "Tempo, in dem der Fehler mit kleinerer Schrittweite faellt."
+        },
+        { "slug": "schrittweite", "title": "Schrittweite", "summary": "Abstand zwischen benachbarten Stuetzstellen." },
+        {
+            "slug": "newton-cotes-formel",
+            "title": "Newton-Cotes-Formel",
+            "summary": "Quadratur auf gleichmaessig verteilten Stuetzstellen."
+        },
+        {
+            "slug": "gauss-quadratur",
+            "title": "Gauss-Quadratur",
+            "summary": "Quadratur mit frei gewaehlten Stuetzstellen und Gewichten."
+        },
+        {
+            "slug": "polynominterpolation",
+            "title": "Polynominterpolation",
+            "summary": "Eindeutiges Polynom durch vorgegebene Punkte."
+        },
+        {
+            "slug": "extrapolation",
+            "title": "Extrapolation",
+            "summary": "Kombination mehrerer Naeherungen zum Eliminieren des fuehrenden Fehlerterms."
+        },
+        {
+            "slug": "romberg-integration",
+            "title": "Romberg-Integration",
+            "summary": "Wiederholte Extrapolation der Trapezregel."
+        },
+        {
+            "slug": "rundungsfehler",
+            "title": "Rundungsfehler",
+            "summary": "Fehler durch endliche Gleitkommadarstellung."
+        },
+        {
+            "slug": "konvergenzordnung",
+            "title": "Konvergenzordnung",
+            "summary": "Ordnung, mit der ein Verfahren gegen die exakte Loesung strebt."
+        },
+        {
+            "slug": "adaptive-quadratur",
+            "title": "Adaptive Quadratur",
+            "summary": "Lokale Verfeinerung dort, wo der Integrand schwer ist."
+        },
+        { "slug": "stetigkeit", "title": "Stetigkeit", "summary": "Keine Spruenge im Funktionsverlauf." },
+        {
+            "slug": "taylorreihe",
+            "title": "Taylorreihe",
+            "summary": "Darstellung einer Funktion durch Ableitungen an einem Punkt."
+        }
+    ],
+    "relations": [
+        ["trapezregel", "riemannsumme", "requires"],
+        ["riemannsumme", "numerische-integration", "requires"],
+        ["simpsonregel", "trapezregel", "requires"],
+        ["simpsonregel", "interpolation", "requires"],
+        ["interpolation", "stuetzstelle", "requires"],
+        ["newton-cotes-formel", "interpolation", "requires"],
+        ["polynominterpolation", "interpolation", "requires"],
+        ["gauss-quadratur", "polynominterpolation", "requires"],
+        ["romberg-integration", "extrapolation", "requires"],
+        ["extrapolation", "fehlerordnung", "requires"],
+        ["konvergenzordnung", "fehlerordnung", "requires"],
+        ["fehlerordnung", "taylorreihe", "requires"],
+        ["trapezregel", "fehlerordnung", "requires"],
+        ["adaptive-quadratur", "schrittweite", "requires"],
+        ["taylorreihe", "stetigkeit", "requires"],
+        ["rundungsfehler", "schrittweite", "requires"],
+        ["trapezregel", "simpsonregel", "contrasts_with"],
+        ["riemannsumme", "gauss-quadratur", "contrasts_with"]
+    ],
+    "acts": [
+        {
+            "concept": "trapezregel",
+            "template": "worked-example",
+            "section": 1,
+            "title": "Trapezregel mit zwei Teilen von Hand",
+            "steps": [
+                ["setup", "Gesucht ist das Integral von f(x) = x^2 ueber [0, 2]."],
+                ["model", "Mit N = 2 ist Delta x = 1, die Stuetzstellen sind 0, 1, 2 und die Funktionswerte 0, 1, 4."],
+                ["model", "Die Trapezformel ergibt 1 * (0/2 + 1 + 4/2) = 3."],
+                [
+                    "fade",
+                    "Neue Aufgabe: dasselbe fuer x^2 ueber [0, 4]. Bestimme zuerst Delta x und die Stuetzstellen."
+                ],
+                ["check", "Berechne daraus allein den Naeherungswert."]
+            ],
+            "success": "Delta x = 2, die Stuetzstellen 0, 2, 4 und der Wert 2 * (0 + 4 + 8) = 24 sind korrekt."
+        },
+        {
+            "concept": "simpsonregel",
+            "template": "worked-example",
+            "section": 2,
+            "title": "Simpsonregel an einem Polynom dritten Grades",
+            "steps": [
+                ["setup", "Gesucht ist das Integral von f(x) = x^3 ueber [0, 2]."],
+                ["model", "Simpson braucht drei Stuetzstellen: 0, 1, 2 mit den Werten 0, 1, 8."],
+                ["model", "Die Formel ergibt (1/3) * (0 + 4*1 + 8) = 4."],
+                ["fade", "Das exakte Integral ist ebenfalls 4. Erklaere, warum hier kein Fehler bleibt."],
+                ["check", "Rechne dieselbe Formel fuer x^4 nach und nenne den Unterschied."]
+            ],
+            "success": "Der fehlerfreie Fall fuer Polynome bis Grad drei ist erkannt und fuer x^4 der verbleibende Fehler benannt."
+        },
+        {
+            "concept": "riemannsumme",
+            "template": "worked-example",
+            "section": 0,
+            "title": "Riemannsumme mit zwei Rechtecken",
+            "steps": [
+                ["setup", "Naehere das Integral von f(x) = x ueber [0, 1] mit zwei Rechtecken."],
+                ["model", "Linke Randpunkte sind 0 und 0.5, die Hoehen 0 und 0.5, die Breite 0.5."],
+                ["model", "Die Summe ist 0.5*0 + 0.5*0.5 = 0.25, exakt waere 0.5."],
+                ["fade", "Nimm jetzt die rechten Randpunkte und stelle die Summe auf."],
+                ["check", "Berechne den Wert und vergleiche ihn mit dem exakten Integral."]
+            ],
+            "success": "Die rechte Summe ergibt 0.5*0.5 + 0.5*1 = 0.75, und der Unterschied ist als Lageabhaengigkeit der Stuetzstellen benannt."
+        },
+        {
+            "concept": "interpolation",
+            "template": "self-explanation",
+            "section": 3,
+            "title": "Warum drei Punkte eine Parabel festlegen",
+            "steps": [
+                ["setup", "Drei Stuetzstellen legen genau eine Parabel fest."],
+                ["prompt", "Warum genuegen drei Punkte, um eine Parabel eindeutig zu bestimmen?"],
+                ["reflect", "Formuliere die Antwort ueber die Zahl der Freiheitsgrade eines Polynoms zweiten Grades."],
+                ["check", "Pruefe deine Erklaerung daran, was bei vier Punkten passiert."]
+            ],
+            "success": "Die Antwort nennt die drei Koeffizienten und folgert, dass vier Punkte eine Parabel im Allgemeinen ueberbestimmen."
+        },
+        {
+            "concept": "fehlerordnung",
+            "template": "self-explanation",
+            "section": 4,
+            "title": "Warum der Trapezfehler viertelt",
+            "steps": [
+                ["setup", "Bei der Trapezregel viertelt sich der Fehler, wenn die Schrittweite halbiert wird."],
+                ["prompt", "Warum viertelt sich der Fehler und halbiert er sich nicht?"],
+                ["reflect", "Begruende die Ordnung zwei ueber den ersten nicht verschwindenden Term der Taylorreihe."],
+                ["check", "Was folgt daraus fuer die Ordnung der Simpsonregel?"]
+            ],
+            "success": "Der Zusammenhang zwischen Fehlerterm, Potenz der Schrittweite und Ordnung ist erklaert und auf die Simpsonregel uebertragen."
+        },
+        {
+            "concept": "trapezregel",
+            "template": "contrasting-cases",
+            "section": 1,
+            "title": "Trapez gegen Rechteck an derselben Stelle",
+            "steps": [
+                ["setup", "Beide Naeherungen nutzen dieselben zwei Teilintervalle fuer f(x) = x^2 ueber [0, 2]."],
+                [
+                    "show",
+                    "Links liefert die Trapezregel 3. Rechts liefert die Riemannsumme mit linken Randpunkten 1 * (0 + 1) = 1."
+                ],
+                [
+                    "compare",
+                    "Was unterscheidet beide Ansaetze, und warum ist einer deutlich naeher am exakten Wert 8/3?"
+                ],
+                ["conclude", "Benenne das Merkmal, das den Unterschied macht."]
+            ],
+            "success": "Das Merkmal ist die Verbindung benachbarter Werte durch eine Gerade statt eines konstanten Werts pro Teil."
+        },
+        {
+            "concept": "trapezregel",
+            "template": "predict-observe-explain",
+            "section": 1,
+            "title": "Was passiert beim Halbieren der Schrittweite",
+            "steps": [
+                ["setup", "Genaehert wird das Integral von x^2 ueber [0, 1], einmal mit N = 2, einmal mit N = 4."],
+                [
+                    "predict",
+                    "Schaetze vor dem Rechnen: Um welchen Faktor kleiner wird der Fehler beim Halbieren der Schrittweite?"
+                ],
+                ["observe", "N = 2 ergibt 0.375, N = 4 ergibt 0.34375. Exakt ist 1/3."],
+                ["explain", "Vergleiche deine Schaetzung mit den Zahlen und erklaere die Abweichung."]
+            ],
+            "success": "Der Faktor vier ist aus den Zahlen abgeleitet und mit der Ordnung zwei der Trapezregel begruendet."
+        },
+        {
+            "concept": "simpsonregel",
+            "template": "retrieval-practice",
+            "section": 2,
+            "title": "Simpsonregel aus dem Kopf",
+            "steps": [
+                ["prompt", "Welche Polynome integriert die Simpsonregel exakt, und warum gerade diese?"],
+                ["recall", "Antworte ohne nachzusehen, in hoechstens drei Saetzen."],
+                ["check", "Vergleiche mit dem Skript und benenne, was gefehlt hat."]
+            ],
+            "success": "Genannt sind Grad drei, die Parabel durch drei Stuetzstellen und das Verschwinden des Interpolationsfehlers bei der Integration."
+        }
+    ]
+}

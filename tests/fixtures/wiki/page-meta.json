@@ -1,0 +1,27 @@
+{
+    "batchcomplete": true,
+    "query": {
+        "pages": [
+            {
+                "pageid": 573452,
+                "ns": 0,
+                "title": "Trapezoidal rule",
+                "contentmodel": "wikitext",
+                "pagelanguage": "en",
+                "pagelanguagehtmlcode": "en",
+                "pagelanguagedir": "ltr",
+                "touched": "2026-10-26T19:16:47Z",
+                "lastrevid": 1378446929,
+                "length": 22498,
+                "fullurl": "https://en.wikipedia.org/wiki/Trapezoidal_rule",
+                "editurl": "https://en.wikipedia.org/w/index.php?title=Trapezoidal_rule&action=edit",
+                "canonicalurl": "https://en.wikipedia.org/wiki/Trapezoidal_rule",
+                "pageprops": {
+                    "page_image_free": "Trapezoidal_rule_illustration.svg",
+                    "wikibase-shortdesc": "Numerical integration method",
+                    "wikibase_item": "Q833293"
+                }
+            }
+        ]
+    }
+}

@@ -11,6 +11,24 @@ export const DOMAIN_ERROR_CODES = [
     'patRateLimited',
     'invalidAvatarData',
     'avatarPngOnly',
+    'conceptNotFound',
+    'sourceNotFound',
+    'actNotFound',
+    'lectureNotFound',
+    'notOwner',
+    'relationCycle',
+    'invalidBrief',
+    'lectureNotPublishable',
+    'sourceInUse',
+    'publicationRefused',
+    'aiUnavailable',
+    'aiInvalidResponse',
+    'embeddingDimensionMismatch',
+    'planIncomplete',
+    'creationJobActive',
+    'sessionNotFound',
+    'noActAvailable',
+    'invalidAnswer',
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];
@@ -45,3 +63,15 @@ export const domainError = (
 
 export const domainErrorFromPacket = (packet: DomainErrorPacket): TRPCError =>
     new TRPCError({ code: 'BAD_REQUEST', message: packet.code, cause: { domainError: packet } });
+
+export class DomainFailure extends Error {
+    readonly domainCode: DomainErrorCode;
+    readonly params: DomainErrorParams;
+
+    constructor(domainCode: DomainErrorCode, message: string, params: DomainErrorParams = {}) {
+        super(message);
+        this.name = 'DomainFailure';
+        this.domainCode = domainCode;
+        this.params = params;
+    }
+}

@@ -25,6 +25,7 @@
         "db:migrate:latest": "npx knex migrate:latest",
         "db:migrate:rollback": "npx knex migrate:rollback",
         "db:seed": "knex seed:run --env development",
+        "db:seed:corpus": "NODE_ENV=development tsx tools/seed_corpus.ts",
         "db:types:check": "node ./tools/db_types.cjs check",
         "db:types:update": "node ./tools/db_types.cjs update",
         "i18n:scan": "node ./tools/i18n_scan.cjs && node ./tools/i18n_scan_literals.cjs",
@@ -32,6 +33,7 @@
         "generate-keycloak-realm": "set -a && . ./.env && set +a && envsubst < ./keycloak/data/template.json > ./keycloak/data/import/initialRealm.json"
     },
     "dependencies": {
+        "@ai-sdk/openai-compatible": "^3.0.81",
         "@radix-ui/react-accordion": "^1.2.12",
         "@radix-ui/react-avatar": "^1.1.11",
         "@radix-ui/react-checkbox": "^1.3.3",
@@ -52,6 +54,7 @@
         "@trpc/server": "^11.5.1",
         "@trpc/tanstack-react-query": "^11.6.0",
         "@vitejs/plugin-react": "^4.4.1",
+        "ai": "^7.0.157",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "daisyui": "^5.1.6",
@@ -61,7 +64,7 @@
         "knex": "^3.1.0",
         "knex-types": "^0.5.0",
         "lucide-react": "^0.544.0",
-        "next": "^16.4.0",
+        "next": "^16.4.3",
         "next-auth": "^4.24.11",
         "next-intl": "^4.14.7",
         "next-themes": "^0.4.6",
@@ -106,5 +109,10 @@
         "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^5.0.3",
         "wait-on": "^9.0.1"
+    },
+    "overrides": {
+        "trpc-to-openapi": {
+            "@rollup/rollup-linux-x64-gnu": "4.64.5"
+        }
     }
 }

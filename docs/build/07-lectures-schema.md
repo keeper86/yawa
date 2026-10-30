@@ -1,0 +1,135 @@
+# 07 — Lectures schema
+
+Depends on: 02, 03, 05. Blocks: 10, 14, 18.
+
+## Decision gate
+
+- Are prerequisites part of the brief, or only the concept graph? Only the graph. Duplicating them into JSON would create two sources of truth for the same fact.
+- Can a lecture contain acts the creator does not own? No. A lecture is a creator's curation; foreign acts enter indirectly through the concept graph at retrieval time, not through the lecture.
+
+## Deliverables
+
+Migration `migrations/20261029000006_lectures.js`, plus the brief zod schema in `src/server/lectures/brief.ts` with unit tests.
+
+## DDL
+
+```sql
+CREATE TABLE lectures (
+    id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_user_id VARCHAR(255) NOT NULL REFERENCES user_data(user_id) ON DELETE CASCADE,
+    title         TEXT         NOT NULL,
+    abstract      TEXT         NOT NULL DEFAULT '',
+    language      VARCHAR(8)   NOT NULL,
+    brief         JSONB        NOT NULL DEFAULT '{}'::jsonb,
+    published_at  TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_lectures_owner ON lectures (owner_user_id, updated_at DESC);
+CREATE INDEX idx_lectures_published ON lectures (published_at) WHERE published_at IS NOT NULL;
+
+CREATE TABLE lecture_concepts (
+    lecture_id UUID NOT NULL REFERENCES lectures(id) ON DELETE CASCADE,
+    concept_id UUID NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
+    PRIMARY KEY (lecture_id, concept_id)
+);
+CREATE INDEX idx_lecture_concepts_concept ON lecture_concepts (concept_id);
+
+CREATE TABLE lecture_sources (
+    lecture_id UUID NOT NULL REFERENCES lectures(id) ON DELETE CASCADE,
+    source_id  UUID NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    PRIMARY KEY (lecture_id, source_id)
+);
+
+CREATE TABLE lecture_acts (
+    lecture_id UUID    NOT NULL REFERENCES lectures(id) ON DELETE CASCADE,
+    act_id     UUID    NOT NULL REFERENCES acts(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL,
+    PRIMARY KEY (lecture_id, act_id)
+);
+CREATE INDEX idx_lecture_acts_order ON lecture_acts (lecture_id, position);
+```
+
+## The brief
+
+`brief` is the contract between the creator and the creation agent. It must be checkable, so every field is either enumerable or a list of concept slugs:
+
+```json
+{
+    "audience": "B.Sc. Physik, 3. Semester",
+    "objectives": [{ "concept": "trapezoidal-rule", "verb": "apply", "depth": "compute a two-interval integral" }],
+    "mustCover": ["trapezoidal-rule", "simpsons-rule"],
+    "mustAvoid": ["adaptive step size"],
+    "durationMinutes": 90,
+    "tone": "formal",
+    "language": "de",
+    "notes": "Students have seen Riemann sums but not interpolation."
+}
+```
+
+`verb` is restricted to observable verbs (`explain`, `apply`, `compare`, `estimate`, `derive`, `classify`). "Understand" is not in the list on purpose: it cannot be reviewed against.
+
+Two validation rules, both enforced when the creation agent starts (chunk 14) and when a lecture is published:
+
+1. every slug in `objectives` and `mustCover` exists in `lecture_concepts`;
+2. every `mustCover` slug has at least one act in the lecture.
+
+`lecture_concepts` is the authoritative scope and may contain concepts with no objective — the creator is saying "this lecture touches this", which the graph uses for prerequisite checks.
+
+## Publication gate
+
+Publishing a lecture:
+
+1. requires `brief` to pass validation;
+2. requires every act in `lecture_acts` to have `status='accepted'` and `origin IN ('authored','generated')` with grounding present for the latter two;
+3. sets `published_at` on the lecture and on those acts, and stamps `reviewed_by_user_id`/`reviewed_at` where missing;
+4. is refused if any act is `proposed` or `rejected`.
+
+Unpublishing is refused in the MVP. Withdrawing content is a moderation concern with its own chunk; silently pulling a published act would break other creators' lectures that reference the same concept.
+
+## The lecture does not gate retrieval
+
+The lecture does **not** gate retrieval. The tutoring agent selects acts by concept, not by lecture (invariant 7 and chunk 15). A lecture is what a human browses, curates, reviews and shares; it is also the source of the acts the agent may serve, because only published acts are visible. Keeping those two roles separate is the reason this table has no role in the query path of chunk 15.
+
+## Publishing is additive
+
+Publishing a lecture again does not replace (there is nothing to replace). It stamps `published_at` on every act of the lecture that does not have one yet, and leaves the lecture's own `published_at` at its first value:
+
+```sql
+published_at = COALESCE(published_at, $now)
+```
+
+The first version returned early when the lecture was already published. That made extended lectures unpublishable: acts accepted after the first publication kept `published_at = NULL` forever, and the tutor — which only serves published acts — could not find them. A test now publishes, adds another accepted act, and publishes again.
+
+Validation still covers the whole lecture, so adding a draft act to a published lecture makes the next publish fail until that act is reviewed. That is the intended pressure: nothing reaches a learner because it happened to be attached to something already published.
+
+## Down migration
+
+Drop `lecture_acts`, `lecture_sources`, `lecture_concepts`, `lectures`.
+
+## Acceptance
+
+- [x] Migration up/down/up succeeds; `npm run db:types:update` adds the four tables.
+- [x] Brief schema rejects an unknown verb, a missing `mustCover` and an objective whose slug is absent from `lecture_concepts`.
+- [x] Publishing a lecture with one `proposed` act fails and changes nothing.
+- [x] Publishing stamps `published_at` on the lecture and on its acts in one transaction.
+- [x] Deleting a lecture leaves its acts untouched.
+
+## State after execution
+
+Files: `migrations/20261029000006_lectures.js`, `src/lib/lectureBrief.ts` + `src/lib/lectureBrief.test.ts` (9 unit tests), `src/server/lectures/publish.ts` + `src/server/lectures/publish.test.ts` (10 tests), the four tables in `TABLES`.
+
+The brief lives in `src/lib/` rather than `src/server/` because it is pure zod with no database access, and the unit project is the cheaper place to test it — a file under `src/server/` would spin a Postgres container to validate an enum.
+
+`publishLecture(db, { lectureId, userId })` locks the lecture row, then checks in this order: exists, owned by the caller, not already published (returns unchanged), brief parses, brief within scope, has acts, every act accepted and grounded when generated, every `mustCover` concept covered by an act. Only then does it stamp the acts and the lecture in the same transaction. Refusal therefore changes nothing, which the test asserts on both tables.
+
+Two notes for chunk 10:
+
+- The service throws plain `Error`s with distinctive messages (`not found`, `Only the owner`, `not publishable`, `no act covers`, `outside the lecture scope`, `no acts`). The controller maps them to `DOMAIN_ERROR_CODES`.
+- The creation agent in chunk 14 must call the same validation functions before spending tokens, so a brief that cannot pass the publish gate never reaches the model.
+
+## Anti-goals
+
+- No lecture versions, no forks, no draft/published branching beyond `published_at`.
+- No comment threads, no review approvals by a third party.
+- No lecture-level embeddings.
