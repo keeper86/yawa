@@ -1,4 +1,40 @@
 services:
+    ollama:
+        image: ollama/ollama:0.11.10
+        environment:
+            OLLAMA_HOST: 0.0.0.0:11434
+            CUDA_VISIBLE_DEVICES: '-1'
+            ROCR_VISIBLE_DEVICES: '-1'
+        volumes:
+            - ollama_data:/root/.ollama
+        healthcheck:
+            test: ['CMD', 'ollama', 'list']
+            interval: 5s
+            timeout: 5s
+            retries: 30
+
+    ollama-init:
+        image: ollama/ollama:0.11.10
+        environment:
+            OLLAMA_HOST: http://ollama:11434
+        depends_on:
+            ollama:
+                condition: service_healthy
+        command: ['pull', 'embeddinggemma:300m']
+        restart: 'no'
+
+    embedding-smoke:
+        profiles: ['embedding-smoke']
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: embedding-smoke
+        environment:
+            OLLAMA_BASE_URL: http://ollama:11434
+        depends_on:
+            ollama-init:
+                condition: service_completed_successfully
+
     caddy:
         image: caddy:alpine
         ports:
@@ -22,8 +58,11 @@ services:
             dockerfile: Dockerfile
             target: production
         environment:
+            OLLAMA_BASE_URL: http://ollama:11434
             DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
         depends_on:
+            ollama-init:
+                condition: service_completed_successfully
             db:
                 condition: service_healthy
             migrations:
@@ -109,3 +148,4 @@ volumes:
     keycloak_db_data:
     caddy_data:
     caddy_config:
+    ollama_data:

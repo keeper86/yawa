@@ -1,4 +1,40 @@
 services:
+    ollama:
+        image: ollama/ollama:0.11.10
+        environment:
+            OLLAMA_HOST: 0.0.0.0:11434
+            CUDA_VISIBLE_DEVICES: '-1'
+            ROCR_VISIBLE_DEVICES: '-1'
+        volumes:
+            - ollama_data:/root/.ollama
+        healthcheck:
+            test: ['CMD', 'ollama', 'list']
+            interval: 5s
+            timeout: 5s
+            retries: 30
+
+    ollama-init:
+        image: ollama/ollama:0.11.10
+        environment:
+            OLLAMA_HOST: http://ollama:11434
+        depends_on:
+            ollama:
+                condition: service_healthy
+        command: ['pull', 'embeddinggemma:300m']
+        restart: 'no'
+
+    embedding-smoke:
+        profiles: ['embedding-smoke']
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: embedding-smoke
+        environment:
+            OLLAMA_BASE_URL: http://ollama:11434
+        depends_on:
+            ollama-init:
+                condition: service_completed_successfully
+
     app:
         image: ghcr.io/keeper86/yawa:local
         build:
@@ -10,6 +46,7 @@ services:
         extra_hosts:
             - 'localhost:host-gateway'
         environment:
+            OLLAMA_BASE_URL: http://ollama:11434
             NODE_ENV: production
             APP_DOMAIN: localhost
             NEXTAUTH_URL: http://localhost:3000
@@ -25,6 +62,8 @@ services:
             DATABASE_URL: postgresql://postgres:password@db:5432/yawadb
             LOG_LEVEL: warn
         depends_on:
+            ollama-init:
+                condition: service_completed_successfully
             db:
                 condition: service_healthy
             migrations:
@@ -104,3 +143,6 @@ services:
             timeout: 3s
             retries: 10
         command: postgres -p 5433
+
+volumes:
+    ollama_data:
