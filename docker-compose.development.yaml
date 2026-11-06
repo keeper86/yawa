@@ -1,4 +1,30 @@
 services:
+    ollama:
+        image: ollama/ollama:0.11.10
+        environment:
+            OLLAMA_HOST: 0.0.0.0:11434
+            CUDA_VISIBLE_DEVICES: '-1'
+            ROCR_VISIBLE_DEVICES: '-1'
+        volumes:
+            - ollama_data:/root/.ollama
+        healthcheck:
+            test: ['CMD', 'ollama', 'list']
+            interval: 5s
+            timeout: 5s
+            retries: 30
+        ports:
+            - '127.0.0.1:11434:11434'
+
+    ollama-init:
+        image: ollama/ollama:0.11.10
+        environment:
+            OLLAMA_HOST: http://ollama:11434
+        depends_on:
+            ollama:
+                condition: service_healthy
+        command: ['pull', 'embeddinggemma:300m']
+        restart: 'no'
+
     db:
         image: timescale/timescaledb:2.17.2-pg15
         deploy:
@@ -51,3 +77,6 @@ services:
         ports:
             - '8080:8080'
         container_name: yawa-dev-keycloak
+
+volumes:
+    ollama_data:
