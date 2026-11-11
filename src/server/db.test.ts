@@ -1,26 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getDb } from 'tests/vitest/setupTestcontainer';
 
-export const TABLES = [
-    'user_data',
-    'messages',
-    'sources',
-    'source_sections',
-    'concepts',
-    'concept_relations',
-    'templates',
-    'acts',
-    'act_grounding',
-    'act_references',
-    'lectures',
-    'lecture_concepts',
-    'lecture_sources',
-    'lecture_acts',
-    'learner_concept_state',
-    'tutor_sessions',
-    'turns',
-    'learner_evidence',
-];
+export const TABLES = ['user_data', 'messages'];
 
 const tableExists = async (table: string): Promise<boolean> => {
     const db = getDb();

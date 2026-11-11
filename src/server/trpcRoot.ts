@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { OpenApiMeta } from 'trpc-to-openapi';
-import { DomainFailure, domainCodeForMessage, domainError } from './domainError';
+import { domainCodeForMessage } from './domainError';
 import type { DomainErrorPacket } from './domainError';
 import type { Context } from './trpcContext';
 
@@ -21,16 +21,7 @@ export const trpcRoot = initTRPC
         },
     });
 
-const domainFailureMiddleware = trpcRoot.middleware(async ({ next }) => {
-    const result = await next();
-    if (!result.ok && result.error.cause instanceof DomainFailure) {
-        const failure = result.error.cause;
-        throw domainError('BAD_REQUEST', failure.domainCode, failure.message, failure.params);
-    }
-    return result;
-});
-
-export const procedure = trpcRoot.procedure.use(domainFailureMiddleware);
+export const procedure = trpcRoot.procedure;
 
 const unauthorizedError = new TRPCError({
     code: 'UNAUTHORIZED',
@@ -38,7 +29,7 @@ const unauthorizedError = new TRPCError({
     cause: { domainError: { code: 'notLoggedIn', params: {} } },
 });
 
-export const protectedProcedure = procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = trpcRoot.procedure.use(async ({ ctx, next }) => {
     const session = ctx.session;
 
     if (session.type === 'pat-auth') {
@@ -55,7 +46,7 @@ export const protectedProcedure = procedure.use(async ({ ctx, next }) => {
     throw unauthorizedError;
 });
 
-export const patAccessibleProcedure = procedure.use(async ({ ctx, next }) => {
+export const patAccessibleProcedure = trpcRoot.procedure.use(async ({ ctx, next }) => {
     if (ctx.session.user?.id) {
         return next();
     }
