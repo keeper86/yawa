@@ -1,4 +1,4 @@
-import { type LucideIcon, FileText, Home, KeyRound, Mail, User } from 'lucide-react';
+import { type LucideIcon, FileText, FileUp, Home, KeyRound, Mail, User } from 'lucide-react';
 import type { Route } from 'nextjs-routes';
 import type en from '../i18n/messages/en.json';
 
@@ -52,6 +52,12 @@ export const APP_ROUTES = {
         label: 'Messages',
         icon: Mail,
         isSecondaryNav: true,
+    },
+    pdfUploadTest: {
+        path: '/pdf-upload-test',
+        label: 'pdfUploadTest',
+        icon: FileUp,
+        isMainNav: true,
     },
     imprint: {
         path: '/imprint',
