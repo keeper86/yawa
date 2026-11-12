@@ -11,7 +11,10 @@
         "invalidAvatarData": "Invalid base64 image data",
         "avatarPngOnly": "Only PNG images are supported for avatar",
         "avatarPngFile": "Please upload a PNG image file",
-        "avatarFileTooLarge": "File size must be less than 1MB"
+        "avatarFileTooLarge": "File size must be less than 1MB",
+        "documentNotPdf": "Please upload a PDF file",
+        "documentTooLarge": "PDF file size must be less than 10MB",
+        "documentNotFound": "Document not found"
     },
     "Units": {
         "day": "day",
@@ -175,6 +178,29 @@
             "services": "Services",
             "general": "General"
         }
+    },
+    "Documents": {
+        "upload": "Upload PDF",
+        "hint": "Upload a PDF file to store it in your account.",
+        "chooseFile": "Choose PDF file",
+        "uploadNow": "Upload",
+        "uploading": "Uploading…",
+        "uploadSuccess": "PDF uploaded successfully",
+        "notPdf": "Please upload a PDF file",
+        "fileTooLarge": "PDF file size must be less than 10MB",
+        "documents": "Your documents",
+        "noDocuments": "No documents uploaded yet.",
+        "fileName": "File name",
+        "fileSize": "Size",
+        "uploadedAt": "Uploaded",
+        "actions": "Actions",
+        "download": "Download",
+        "downloading": "Loading…",
+        "downloadFailed": "Download failed. Please try again.",
+        "delete": "Delete",
+        "deleteSuccess": "Document deleted",
+        "confirmDeleteTitle": "Delete document",
+        "confirmDeleteDescription": "This will permanently delete the document. This action cannot be undone."
     },
     "Charts": {
         "year": "Year {year}",
