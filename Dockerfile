@@ -14,6 +14,13 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
+FROM deps AS embedding-smoke
+COPY tsconfig.json vitest.smoke.config.ts ./
+COPY src/server/embedding.ts ./src/server/embedding.ts
+COPY tests/smoke/ ./tests/smoke/
+COPY tools/embedding_debug.ts ./tools/embedding_debug.ts
+CMD ["npm", "run", "test:smoke"]
+
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
