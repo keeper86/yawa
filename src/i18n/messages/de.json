@@ -200,7 +200,11 @@
         "delete": "Löschen",
         "deleteSuccess": "Dokument gelöscht",
         "confirmDeleteTitle": "Dokument löschen",
-        "confirmDeleteDescription": "Das Dokument wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
+        "confirmDeleteDescription": "Das Dokument wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "deleteAll": "Alle löschen",
+        "deleteAllSuccess": "Alle Dokumente gelöscht",
+        "confirmDeleteAllTitle": "Alle Dokumente löschen",
+        "confirmDeleteAllDescription": "Alle Ihre Dokumente werden dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
     },
     "Charts": {
         "year": "Jahr {year}",

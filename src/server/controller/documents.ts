@@ -89,9 +89,10 @@ export const listDocuments = () => {
         .output(z.object({ documents: z.array(documentSummary) }))
         .query(async ({ ctx }) => {
             const userId = getUserIdFromContext(ctx);
-            const rows = (await db('documents').where({ user_id: userId }).orderBy('created_at', 'desc')) as Array<
-                Omit<Documents, 'content'>
-            >;
+            const rows = (await db('documents')
+                .select('id', 'user_id', 'filename', 'content_sha256', 'byte_size', 'page_count', 'created_at')
+                .where({ user_id: userId })
+                .orderBy('created_at', 'desc')) as Array<Omit<Documents, 'content'>>;
 
             return { documents: rows.map(toSummary) };
         });
@@ -99,7 +100,7 @@ export const listDocuments = () => {
 
 export const getDocument = () => {
     return protectedProcedure
-        .input(z.object({ id: z.string() }))
+        .input(z.object({ id: z.uuid() }))
         .output(singleDocument)
         .query(async ({ input, ctx }) => {
             const userId = getUserIdFromContext(ctx);
@@ -118,7 +119,7 @@ export const getDocument = () => {
 
 export const deleteDocument = () => {
     return protectedProcedure
-        .input(z.object({ id: z.string() }))
+        .input(z.object({ id: z.uuid() }))
         .output(z.void())
         .mutation(async ({ input, ctx }) => {
             const userId = getUserIdFromContext(ctx);
@@ -127,5 +128,19 @@ export const deleteDocument = () => {
             if (deleted === 0) {
                 throw domainError('NOT_FOUND', 'documentNotFound', 'Document not found');
             }
+        });
+};
+
+export const deleteAllDocuments = () => {
+    return protectedProcedure
+        .input(z.void())
+        .output(z.void())
+        .mutation(async ({ ctx }) => {
+            const userId = getUserIdFromContext(ctx);
+            const deleted = await db('documents').where({ user_id: userId }).delete();
+            logger.debug(
+                { component: 'document-upload' },
+                `Deleted all documents for user ${userId} (${deleted} rows)`,
+            );
         });
 };
