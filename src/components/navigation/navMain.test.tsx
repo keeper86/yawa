@@ -1,5 +1,6 @@
 import AppProviders from '@/app/AppProviders';
 import { getMainNavRoutes, getProtectedRoutes, getPublicRoutes } from '@/lib/appRoutes';
+import en from '@/i18n/messages/en.json';
 import { screen } from '@testing-library/react';
 import type { Session } from 'next-auth';
 import React from 'react';
@@ -27,8 +28,9 @@ describe('NavMain', () => {
         );
         const mainNavRoutes = getMainNavRoutes();
         for (const route of mainNavRoutes) {
-            expect(screen.getByText(route.label)).toBeInTheDocument();
-            const link = screen.getByText(route.label).closest('a');
+            const label = en.Nav[route.label];
+            expect(screen.getByText(label)).toBeInTheDocument();
+            const link = screen.getByText(label).closest('a');
             expect(link).toHaveAttribute('href', route.path);
             if (route.icon) {
                 const svg = link?.querySelector('svg');

@@ -11,6 +11,9 @@ export const DOMAIN_ERROR_CODES = [
     'patRateLimited',
     'invalidAvatarData',
     'avatarPngOnly',
+    'documentNotPdf',
+    'documentTooLarge',
+    'documentNotFound',
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];
@@ -32,6 +35,9 @@ const CODE_BY_MESSAGE: Record<string, DomainErrorCode> = {
     'Too many requests from this PAT, please try again later': 'patRateLimited',
     'Invalid base64 image data': 'invalidAvatarData',
     'Only PNG images are supported for avatar': 'avatarPngOnly',
+    'Only PDF files are supported': 'documentNotPdf',
+    'PDF file size must be less than 10MB': 'documentTooLarge',
+    'Document not found': 'documentNotFound',
 };
 
 export const domainCodeForMessage = (message: string): DomainErrorCode | null => CODE_BY_MESSAGE[message] ?? null;

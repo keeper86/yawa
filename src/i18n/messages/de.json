@@ -11,7 +11,10 @@
         "invalidAvatarData": "Ungültige Base64-Bilddaten",
         "avatarPngOnly": "Für das Profilbild werden nur PNG-Bilder unterstützt",
         "avatarPngFile": "Bitte laden Sie eine PNG-Bilddatei hoch",
-        "avatarFileTooLarge": "Die Dateigröße muss unter 1 MB liegen"
+        "avatarFileTooLarge": "Die Dateigröße muss unter 1 MB liegen",
+        "documentNotPdf": "Bitte laden Sie eine PDF-Datei hoch",
+        "documentTooLarge": "Die Größe der PDF-Datei muss unter 10 MB liegen",
+        "documentNotFound": "Dokument nicht gefunden"
     },
     "Units": {
         "day": "Tag",
@@ -34,6 +37,7 @@
         "Messages": "Nachrichten",
         "Imprint": "Impressum",
         "pat": "PAT-Verwaltung",
+        "pdfUploadTest": "PDF Upload Test",
         "logoAlt": "Yawa-Logo",
         "brand": "Yawa"
     },
@@ -174,6 +178,33 @@
             "services": "Dienstleistungen",
             "general": "Allgemein"
         }
+    },
+    "Documents": {
+        "upload": "PDF hochladen",
+        "hint": "Laden Sie eine PDF-Datei hoch, um sie in Ihrem Konto zu speichern.",
+        "chooseFile": "PDF-Datei auswählen",
+        "uploadNow": "Hochladen",
+        "uploading": "Wird hochgeladen…",
+        "uploadSuccess": "PDF wurde erfolgreich hochgeladen",
+        "notPdf": "Bitte laden Sie eine PDF-Datei hoch",
+        "fileTooLarge": "Die Größe der PDF-Datei muss unter 10 MB liegen",
+        "documents": "Ihre Dokumente",
+        "noDocuments": "Noch keine Dokumente hochgeladen.",
+        "fileName": "Dateiname",
+        "fileSize": "Größe",
+        "uploadedAt": "Hochgeladen",
+        "actions": "Aktionen",
+        "download": "Herunterladen",
+        "downloading": "Wird geladen…",
+        "downloadFailed": "Herunterladen fehlgeschlagen. Bitte versuchen Sie es erneut.",
+        "delete": "Löschen",
+        "deleteSuccess": "Dokument gelöscht",
+        "confirmDeleteTitle": "Dokument löschen",
+        "confirmDeleteDescription": "Das Dokument wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "deleteAll": "Alle löschen",
+        "deleteAllSuccess": "Alle Dokumente gelöscht",
+        "confirmDeleteAllTitle": "Alle Dokumente löschen",
+        "confirmDeleteAllDescription": "Alle Ihre Dokumente werden dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
     },
     "Charts": {
         "year": "Jahr {year}",
