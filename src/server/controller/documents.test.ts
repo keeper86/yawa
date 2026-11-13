@@ -94,6 +94,28 @@ describe('document endpoints (integration)', () => {
         expect(documents.some((doc) => doc.id === uploaded.id)).toBe(false);
     });
 
+    it('deletes all documents of the user and leaves other users documents untouched', async () => {
+        const caller = getCaller();
+        const other = getCaller(testUsers.otherUser.user_id);
+        const db = getDb();
+
+        const first = await caller.uploadDocument({ filename: 'first.pdf', content: validPdfBase64('wipe-1') });
+        const second = await caller.uploadDocument({ filename: 'second.pdf', content: validPdfBase64('wipe-2') });
+        const otherDoc = await other.uploadDocument({ filename: 'other.pdf', content: validPdfBase64('wipe-other') });
+
+        try {
+            await caller.deleteAllDocuments();
+
+            const { documents } = await caller.listDocuments();
+            expect(documents.some((doc) => [first.id, second.id].includes(doc.id))).toBe(false);
+
+            await expect(caller.getDocument({ id: first.id })).rejects.toThrow();
+            await expect(other.getDocument({ id: otherDoc.id })).resolves.toMatchObject({ id: otherDoc.id });
+        } finally {
+            await db('documents').whereIn('id', [first.id, second.id, otherDoc.id]).del();
+        }
+    });
+
     it('rejects a file that is not a pdf', async () => {
         const caller = getCaller();
 
@@ -115,5 +137,12 @@ describe('document endpoints (integration)', () => {
 
         await expect(caller.getDocument({ id: missing })).rejects.toThrow();
         await expect(caller.deleteDocument({ id: missing })).rejects.toThrow();
+    });
+
+    it('rejects a malformed document id', async () => {
+        const caller = getCaller();
+
+        await expect(caller.getDocument({ id: 'not-a-uuid' })).rejects.toThrow();
+        await expect(caller.deleteDocument({ id: 'not-a-uuid' })).rejects.toThrow();
     });
 });

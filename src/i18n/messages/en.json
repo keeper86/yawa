@@ -200,7 +200,11 @@
         "delete": "Delete",
         "deleteSuccess": "Document deleted",
         "confirmDeleteTitle": "Delete document",
-        "confirmDeleteDescription": "This will permanently delete the document. This action cannot be undone."
+        "confirmDeleteDescription": "This will permanently delete the document. This action cannot be undone.",
+        "deleteAll": "Delete all",
+        "deleteAllSuccess": "All documents deleted",
+        "confirmDeleteAllTitle": "Delete all documents",
+        "confirmDeleteAllDescription": "This will permanently delete all your documents. This action cannot be undone."
     },
     "Charts": {
         "year": "Year {year}",

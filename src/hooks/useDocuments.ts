@@ -35,3 +35,14 @@ export function useDeleteDocument() {
         }),
     );
 }
+
+export function useDeleteAllDocuments() {
+    const trpc = useTRPC();
+    const queryClient = useQueryClient();
+
+    return useMutation(
+        trpc.deleteAllDocuments.mutationOptions({
+            onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.listDocuments.queryKey() }),
+        }),
+    );
+}

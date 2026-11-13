@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useDeleteDocument, useDocuments, useUploadDocument } from '@/hooks/useDocuments';
+import { useDeleteAllDocuments, useDeleteDocument, useDocuments, useUploadDocument } from '@/hooks/useDocuments';
 import { useErrorMessage } from '@/i18n/errors';
 import { trpcClient } from '@/lib/trpc';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -88,10 +88,12 @@ export default function PdfUploadTestPage() {
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [clientError, setClientError] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
     const { documents, isLoading } = useDocuments();
     const upload = useUploadDocument();
     const deleteDocument = useDeleteDocument();
+    const deleteAllDocuments = useDeleteAllDocuments();
 
     const validateFile = (file: File): string | null => {
         const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
@@ -160,6 +162,14 @@ export default function PdfUploadTestPage() {
         );
     };
 
+    const handleDeleteAll = () => {
+        deleteAllDocuments.mutate(undefined, {
+            onSuccess: () => toast.success(t('deleteAllSuccess')),
+            onError: (error) => setClientError(showError(error)),
+            onSettled: () => setConfirmDeleteAll(false),
+        });
+    };
+
     const isUploading = upload.isPending;
 
     return (
@@ -217,7 +227,25 @@ export default function PdfUploadTestPage() {
                 )}
 
                 <section className='space-y-2'>
-                    <h2 className='text-lg font-semibold'>{t('documents')}</h2>
+                    <div className='flex items-center justify-between gap-2'>
+                        <h2 className='text-lg font-semibold'>{t('documents')}</h2>
+                        {!isLoading && documents.length > 0 && (
+                            <Button
+                                variant='outline'
+                                size='sm'
+                                className='gap-2 text-destructive hover:text-destructive'
+                                onClick={() => setConfirmDeleteAll(true)}
+                                disabled={deleteAllDocuments.isPending || deleteDocument.isPending}
+                            >
+                                {deleteAllDocuments.isPending ? (
+                                    <Loader2 className='h-4 w-4 animate-spin' />
+                                ) : (
+                                    <Trash2 className='h-4 w-4' />
+                                )}
+                                {t('deleteAll')}
+                            </Button>
+                        )}
+                    </div>
 
                     {isLoading ? (
                         <div className='space-y-2'>
@@ -288,6 +316,23 @@ export default function PdfUploadTestPage() {
                         </Button>
                         <Button variant='destructive' onClick={confirmDelete} disabled={deleteDocument.isPending}>
                             {t('delete')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={confirmDeleteAll} onOpenChange={(open) => !open && setConfirmDeleteAll(false)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('confirmDeleteAllTitle')}</DialogTitle>
+                        <DialogDescription>{t('confirmDeleteAllDescription')}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant='outline' onClick={() => setConfirmDeleteAll(false)}>
+                            {tc('cancel')}
+                        </Button>
+                        <Button variant='destructive' onClick={handleDeleteAll} disabled={deleteAllDocuments.isPending}>
+                            {t('deleteAll')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
