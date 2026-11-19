@@ -1,4 +1,5 @@
 import z from 'zod';
+import { bytesToBase64Chars } from '@/lib/base64';
 import { db } from '../db';
 import { logger } from '../logger';
 import { domainError } from '../domainError';
@@ -7,7 +8,6 @@ import type { DocumentMetadata } from '../storage/documentBlobs';
 import { getUserIdFromContext, protectedProcedure } from '../trpcRoot';
 
 const MAX_SIZE_BYTES_DOCUMENT = 10 * 1024 * 1024;
-const bytesToBase64Chars = (bytes: number) => 4 * Math.ceil(bytes / 3);
 const PDF_SIGNATURE = Buffer.from('%PDF-');
 const PDF_MIME_TYPE = 'application/pdf';
 
