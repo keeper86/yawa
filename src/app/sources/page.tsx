@@ -37,7 +37,7 @@ const formatBytes = (bytes: number): string => {
     return `${value.toFixed(1)} ${units[unitIndex]}`;
 };
 
-export default function PdfUploadTestPage() {
+export default function SourcesPage() {
     const t = useTranslations('Documents');
     const tNav = useTranslations('Nav');
     const tc = useTranslations('Common');
@@ -139,7 +139,7 @@ export default function PdfUploadTestPage() {
     const isUploading = upload.isPending;
 
     return (
-        <Page title={tNav('pdfUploadTest')}>
+        <Page title={tNav('sources')}>
             <div className='space-y-6'>
                 <section className='space-y-3 rounded-lg border border-border p-4'>
                     <div className='flex items-center gap-2'>
