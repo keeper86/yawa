@@ -36,16 +36,20 @@ describe('document endpoints (integration)', () => {
         expect(summary.byteSize).toBe(Buffer.from('%PDF-1.4\nhello-report\n%%EOF', 'utf8').length);
         expect(summary.pageCount).toBeNull();
         expect(summary.createdAt).toBeTruthy();
+        expect(summary.duplicate).toBe(false);
     });
 
-    it('dedupes an identical upload by content hash', async () => {
+    it('returns the existing document with duplicate true when the content already exists', async () => {
         const caller = getCaller();
         const content = validPdfBase64('dedupe-me');
 
         const first = await caller.uploadDocument({ filename: 'first.pdf', mimeType: PDF_MIME_TYPE, content });
         const second = await caller.uploadDocument({ filename: 'second.pdf', mimeType: PDF_MIME_TYPE, content });
 
+        expect(first.duplicate).toBe(false);
+        expect(second.duplicate).toBe(true);
         expect(second.id).toBe(first.id);
+        expect(second.filename).toBe('first.pdf');
     });
 
     it('lists documents for the user in descending creation order', async () => {

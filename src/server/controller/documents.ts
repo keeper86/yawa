@@ -64,6 +64,10 @@ const documentSummary = z.object({
 });
 export type DocumentSummary = z.infer<typeof documentSummary>;
 
+const uploadResult = documentSummary.extend({
+    duplicate: z.boolean(),
+});
+
 const toSummary = (row: DocumentMetadata): DocumentSummary => ({
     id: row.id,
     filename: row.filename,
@@ -75,7 +79,7 @@ const toSummary = (row: DocumentMetadata): DocumentSummary => ({
 export const uploadDocument = () => {
     return protectedProcedure
         .input(uploadInput)
-        .output(documentSummary)
+        .output(uploadResult)
         .mutation(async ({ input, ctx }) => {
             const userId = getUserIdFromContext(ctx);
 
@@ -102,7 +106,7 @@ export const uploadDocument = () => {
             if (!stored) {
                 throw domainError('NOT_FOUND', 'documentNotFound', 'Document not found');
             }
-            return toSummary(stored);
+            return { ...toSummary(stored.document), duplicate: stored.duplicate };
         });
 };
 

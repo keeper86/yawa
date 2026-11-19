@@ -12,15 +12,20 @@ type SaveDocumentBlobInput = {
     content: Buffer;
 };
 
+export type SavedDocumentBlob = {
+    document: DocumentMetadata;
+    duplicate: boolean;
+};
+
 type DocumentBlobRef = {
     userId: string;
     documentId: string;
 };
 
-export const save = async ({ userId, filename, content }: SaveDocumentBlobInput): Promise<DocumentMetadata | null> => {
+export const save = async ({ userId, filename, content }: SaveDocumentBlobInput): Promise<SavedDocumentBlob | null> => {
     const contentSha256 = createHash('sha256').update(content).digest('hex');
 
-    await db('documents')
+    const inserted = (await db('documents')
         .insert({
             user_id: userId,
             filename,
@@ -30,14 +35,19 @@ export const save = async ({ userId, filename, content }: SaveDocumentBlobInput)
             content,
         })
         .onConflict(['user_id', 'content_sha256'])
-        .ignore();
+        .ignore()
+        .returning([...DOCUMENT_METADATA_COLUMNS])) as DocumentMetadata[];
 
-    const row = (await db('documents')
+    if (inserted.length > 0) {
+        return { document: inserted[0], duplicate: false };
+    }
+
+    const existing = (await db('documents')
         .select(...DOCUMENT_METADATA_COLUMNS)
         .where({ user_id: userId, content_sha256: contentSha256 })
         .first()) as DocumentMetadata | undefined;
 
-    return row ?? null;
+    return existing ? { document: existing, duplicate: true } : null;
 };
 
 export const load = async ({ userId, documentId }: DocumentBlobRef): Promise<Buffer | null> => {
