@@ -53,9 +53,9 @@ export const APP_ROUTES = {
         icon: Mail,
         isSecondaryNav: true,
     },
-    pdfUploadTest: {
-        path: '/pdf-upload-test',
-        label: 'pdfUploadTest',
+    sources: {
+        path: '/sources',
+        label: 'sources',
         icon: FileUp,
         isMainNav: true,
     },
