@@ -13,6 +13,7 @@
         "avatarPngFile": "Please upload a PNG image file",
         "avatarFileTooLarge": "File size must be less than 1MB",
         "documentNotPdf": "Please upload a PDF file",
+        "invalidDocumentData": "Invalid base64 document data",
         "documentTooLarge": "PDF file size must be less than 10MB",
         "documentNotFound": "Document not found"
     },
@@ -194,9 +195,6 @@
         "fileSize": "Size",
         "uploadedAt": "Uploaded",
         "actions": "Actions",
-        "download": "Download",
-        "downloading": "Loading…",
-        "downloadFailed": "Download failed. Please try again.",
         "delete": "Delete",
         "deleteSuccess": "Document deleted",
         "confirmDeleteTitle": "Delete document",

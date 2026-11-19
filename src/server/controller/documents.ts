@@ -1,21 +1,57 @@
-import type { Documents } from '@/types/db_schemas';
-import { createHash } from 'crypto';
 import z from 'zod';
 import { db } from '../db';
 import { logger } from '../logger';
 import { domainError } from '../domainError';
+import { DOCUMENT_METADATA_COLUMNS, remove, removeAll, save } from '../storage/documentBlobs';
+import type { DocumentMetadata } from '../storage/documentBlobs';
 import { getUserIdFromContext, protectedProcedure } from '../trpcRoot';
 
 const MAX_SIZE_BYTES_DOCUMENT = 10 * 1024 * 1024;
 const bytesToBase64Chars = (bytes: number) => 4 * Math.ceil(bytes / 3);
 const PDF_SIGNATURE = Buffer.from('%PDF-');
+const PDF_MIME_TYPE = 'application/pdf';
+
+const isBase64Char = (charCode: number): boolean =>
+    (charCode >= 65 && charCode <= 90) ||
+    (charCode >= 97 && charCode <= 122) ||
+    (charCode >= 48 && charCode <= 57) ||
+    charCode === 43 ||
+    charCode === 47;
+
+const isBase64 = (content: string): boolean => {
+    if (content.length % 4 !== 0) {
+        return false;
+    }
+
+    const padding = content.endsWith('==') ? 2 : content.endsWith('=') ? 1 : 0;
+    for (let index = 0; index < content.length - padding; index += 1) {
+        if (!isBase64Char(content.charCodeAt(index))) {
+            return false;
+        }
+    }
+
+    return true;
+};
 
 const isPdf = (buffer: Buffer): boolean =>
     buffer.length >= PDF_SIGNATURE.length && buffer.subarray(0, 5).equals(PDF_SIGNATURE);
-const sha256 = (buffer: Buffer): string => createHash('sha256').update(buffer).digest('hex');
+
+const decodeBase64 = (content: string): Buffer => {
+    if (!isBase64(content)) {
+        throw domainError('UNSUPPORTED_MEDIA_TYPE', 'invalidDocumentData', 'Invalid base64 document data');
+    }
+
+    const buffer = Buffer.from(content, 'base64');
+    if (buffer.toString('base64') !== content) {
+        throw domainError('UNSUPPORTED_MEDIA_TYPE', 'invalidDocumentData', 'Invalid base64 document data');
+    }
+
+    return buffer;
+};
 
 const uploadInput = z.object({
     filename: z.string().min(1).max(255),
+    mimeType: z.string().min(1).max(255),
     content: z.string().max(bytesToBase64Chars(MAX_SIZE_BYTES_DOCUMENT), 'Document (base64) is too large'),
 });
 
@@ -28,12 +64,7 @@ const documentSummary = z.object({
 });
 export type DocumentSummary = z.infer<typeof documentSummary>;
 
-const singleDocument = documentSummary.extend({
-    content: z.string(),
-});
-export type SingleDocument = z.infer<typeof singleDocument>;
-
-const toSummary = (row: Omit<Documents, 'content'>): DocumentSummary => ({
+const toSummary = (row: DocumentMetadata): DocumentSummary => ({
     id: row.id,
     filename: row.filename,
     byteSize: row.byte_size,
@@ -47,7 +78,12 @@ export const uploadDocument = () => {
         .output(documentSummary)
         .mutation(async ({ input, ctx }) => {
             const userId = getUserIdFromContext(ctx);
-            const buffer = Buffer.from(input.content, 'base64');
+
+            if (input.mimeType !== PDF_MIME_TYPE) {
+                throw domainError('UNSUPPORTED_MEDIA_TYPE', 'documentNotPdf', 'Only PDF files are supported');
+            }
+
+            const buffer = decodeBase64(input.content);
 
             if (!isPdf(buffer)) {
                 throw domainError('UNSUPPORTED_MEDIA_TYPE', 'documentNotPdf', 'Only PDF files are supported');
@@ -57,29 +93,16 @@ export const uploadDocument = () => {
                 throw domainError('PAYLOAD_TOO_LARGE', 'documentTooLarge', 'PDF file size must be less than 10MB');
             }
 
-            const contentSha256 = sha256(buffer);
             logger.debug(
                 { component: 'document-upload' },
                 `Storing document for user ${userId} (${buffer.length} bytes)`,
             );
 
-            await db('documents')
-                .insert({
-                    user_id: userId,
-                    filename: input.filename,
-                    content_sha256: contentSha256,
-                    byte_size: buffer.length,
-                    page_count: null,
-                    content: buffer,
-                })
-                .onConflict(['user_id', 'content_sha256'])
-                .ignore();
-
-            const row = await db('documents').where({ user_id: userId, content_sha256: contentSha256 }).first();
-            if (!row) {
+            const stored = await save({ userId, filename: input.filename, content: buffer });
+            if (!stored) {
                 throw domainError('NOT_FOUND', 'documentNotFound', 'Document not found');
             }
-            return toSummary(row);
+            return toSummary(stored);
         });
 };
 
@@ -90,30 +113,11 @@ export const listDocuments = () => {
         .query(async ({ ctx }) => {
             const userId = getUserIdFromContext(ctx);
             const rows = (await db('documents')
-                .select('id', 'user_id', 'filename', 'content_sha256', 'byte_size', 'page_count', 'created_at')
+                .select(...DOCUMENT_METADATA_COLUMNS)
                 .where({ user_id: userId })
-                .orderBy('created_at', 'desc')) as Array<Omit<Documents, 'content'>>;
+                .orderBy('created_at', 'desc')) as DocumentMetadata[];
 
             return { documents: rows.map(toSummary) };
-        });
-};
-
-export const getDocument = () => {
-    return protectedProcedure
-        .input(z.object({ id: z.uuid() }))
-        .output(singleDocument)
-        .query(async ({ input, ctx }) => {
-            const userId = getUserIdFromContext(ctx);
-            const row = await db('documents').where({ user_id: userId, id: input.id }).first();
-
-            if (!row) {
-                throw domainError('NOT_FOUND', 'documentNotFound', 'Document not found');
-            }
-
-            return {
-                ...toSummary(row),
-                content: row.content.toString('base64'),
-            };
         });
 };
 
@@ -123,7 +127,7 @@ export const deleteDocument = () => {
         .output(z.void())
         .mutation(async ({ input, ctx }) => {
             const userId = getUserIdFromContext(ctx);
-            const deleted = await db('documents').where({ user_id: userId, id: input.id }).delete();
+            const deleted = await remove({ userId, documentId: input.id });
 
             if (deleted === 0) {
                 throw domainError('NOT_FOUND', 'documentNotFound', 'Document not found');
@@ -137,7 +141,7 @@ export const deleteAllDocuments = () => {
         .output(z.void())
         .mutation(async ({ ctx }) => {
             const userId = getUserIdFromContext(ctx);
-            const deleted = await db('documents').where({ user_id: userId }).delete();
+            const deleted = await removeAll(userId);
             logger.debug(
                 { component: 'document-upload' },
                 `Deleted all documents for user ${userId} (${deleted} rows)`,

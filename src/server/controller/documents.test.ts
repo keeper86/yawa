@@ -1,10 +1,25 @@
 import { getCaller, getDb, testUsers } from 'tests/vitest/setupTestcontainer';
-import { createHash } from 'crypto';
-import { describe, expect, it } from 'vitest';
+import { createHash, randomUUID } from 'crypto';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+type DocumentBlobLoader = typeof import('@/server/storage/documentBlobs').load;
+
+let load: DocumentBlobLoader;
+
+beforeAll(async () => {
+    ({ load } = await import('@/server/storage/documentBlobs'));
+});
+
+const MAX_SIZE_BYTES_DOCUMENT = 10 * 1024 * 1024;
+const PDF_MIME_TYPE = 'application/pdf';
+const PDF_SIGNATURE = Buffer.from('%PDF-');
 
 const encodeBase64 = (content: string) => Buffer.from(content, 'utf8').toString('base64');
 
 const validPdfBase64 = (suffix: string) => encodeBase64(`%PDF-1.4\n${suffix}\n%%EOF`);
+
+const uploadPdf = (filename: string, content: string) =>
+    getCaller().uploadDocument({ filename, mimeType: PDF_MIME_TYPE, content });
 
 describe('document endpoints (integration)', () => {
     it('stores an uploaded pdf and returns a summary without content', async () => {
@@ -12,6 +27,7 @@ describe('document endpoints (integration)', () => {
 
         const summary = await caller.uploadDocument({
             filename: 'report.pdf',
+            mimeType: PDF_MIME_TYPE,
             content: validPdfBase64('hello-report'),
         });
 
@@ -26,8 +42,8 @@ describe('document endpoints (integration)', () => {
         const caller = getCaller();
         const content = validPdfBase64('dedupe-me');
 
-        const first = await caller.uploadDocument({ filename: 'first.pdf', content });
-        const second = await caller.uploadDocument({ filename: 'second.pdf', content });
+        const first = await caller.uploadDocument({ filename: 'first.pdf', mimeType: PDF_MIME_TYPE, content });
+        const second = await caller.uploadDocument({ filename: 'second.pdf', mimeType: PDF_MIME_TYPE, content });
 
         expect(second.id).toBe(first.id);
     });
@@ -36,8 +52,8 @@ describe('document endpoints (integration)', () => {
         const caller = getCaller();
         const db = getDb();
 
-        const older = await caller.uploadDocument({ filename: 'older.pdf', content: validPdfBase64('older') });
-        const newer = await caller.uploadDocument({ filename: 'newer.pdf', content: validPdfBase64('newer') });
+        const older = await uploadPdf('older.pdf', validPdfBase64('older'));
+        const newer = await uploadPdf('newer.pdf', validPdfBase64('newer'));
 
         await db('documents')
             .where({ id: older.id })
@@ -59,24 +75,37 @@ describe('document endpoints (integration)', () => {
         }
     });
 
-    it('returns the base64 content for a stored document', async () => {
-        const caller = getCaller();
-        const source = validPdfBase64('download-me');
-        const uploaded = await caller.uploadDocument({ filename: 'dl.pdf', content: source });
+    it('persists the decoded bytes, hash, pending status and null page count', async () => {
+        const source = Buffer.from('%PDF-1.4\npersisted\n%%EOF', 'utf8');
+        const uploaded = await uploadPdf('persisted.pdf', source.toString('base64'));
 
-        const fetched = await caller.getDocument({ id: uploaded.id });
-        expect(fetched.id).toBe(uploaded.id);
-        expect(fetched.content).toBe(source);
+        const storedBlob = await load({ userId: testUsers.testUser.user_id, documentId: uploaded.id });
+        expect(storedBlob?.equals(source)).toBe(true);
 
-        const db = getDb();
-        await db('documents').where({ id: uploaded.id }).del();
+        const row = await getDb()('documents')
+            .select('content_sha256', 'byte_size', 'page_count', 'status')
+            .where({ id: uploaded.id })
+            .first();
+
+        expect(row).toMatchObject({
+            content_sha256: createHash('sha256').update(source).digest('hex'),
+            byte_size: source.length,
+            page_count: null,
+            status: 'pending',
+        });
+
+        await getDb()('documents').where({ id: uploaded.id }).del();
     });
 
     it('hides another users document from the requester', async () => {
         const other = getCaller(testUsers.otherUser.user_id);
-        const uploaded = await other.uploadDocument({ filename: 'secret.pdf', content: validPdfBase64('secret') });
+        const uploaded = await other.uploadDocument({
+            filename: 'secret.pdf',
+            mimeType: PDF_MIME_TYPE,
+            content: validPdfBase64('secret'),
+        });
 
-        await expect(getCaller().getDocument({ id: uploaded.id })).rejects.toThrow();
+        expect(await load({ userId: testUsers.testUser.user_id, documentId: uploaded.id })).toBeNull();
         await expect(getCaller().deleteDocument({ id: uploaded.id })).rejects.toThrow();
 
         const db = getDb();
@@ -85,11 +114,15 @@ describe('document endpoints (integration)', () => {
 
     it('deletes a document', async () => {
         const caller = getCaller();
-        const uploaded = await caller.uploadDocument({ filename: 'gone.pdf', content: validPdfBase64('delete-me') });
+        const uploaded = await caller.uploadDocument({
+            filename: 'gone.pdf',
+            mimeType: PDF_MIME_TYPE,
+            content: validPdfBase64('delete-me'),
+        });
 
         await caller.deleteDocument({ id: uploaded.id });
 
-        await expect(caller.getDocument({ id: uploaded.id })).rejects.toThrow();
+        expect(await load({ userId: testUsers.testUser.user_id, documentId: uploaded.id })).toBeNull();
         const { documents } = await caller.listDocuments();
         expect(documents.some((doc) => doc.id === uploaded.id)).toBe(false);
     });
@@ -99,9 +132,13 @@ describe('document endpoints (integration)', () => {
         const other = getCaller(testUsers.otherUser.user_id);
         const db = getDb();
 
-        const first = await caller.uploadDocument({ filename: 'first.pdf', content: validPdfBase64('wipe-1') });
-        const second = await caller.uploadDocument({ filename: 'second.pdf', content: validPdfBase64('wipe-2') });
-        const otherDoc = await other.uploadDocument({ filename: 'other.pdf', content: validPdfBase64('wipe-other') });
+        const first = await uploadPdf('first.pdf', validPdfBase64('wipe-1'));
+        const second = await uploadPdf('second.pdf', validPdfBase64('wipe-2'));
+        const otherDoc = await other.uploadDocument({
+            filename: 'other.pdf',
+            mimeType: PDF_MIME_TYPE,
+            content: validPdfBase64('wipe-other'),
+        });
 
         try {
             await caller.deleteAllDocuments();
@@ -109,40 +146,75 @@ describe('document endpoints (integration)', () => {
             const { documents } = await caller.listDocuments();
             expect(documents.some((doc) => [first.id, second.id].includes(doc.id))).toBe(false);
 
-            await expect(caller.getDocument({ id: first.id })).rejects.toThrow();
-            await expect(other.getDocument({ id: otherDoc.id })).resolves.toMatchObject({ id: otherDoc.id });
+            expect(await load({ userId: testUsers.testUser.user_id, documentId: first.id })).toBeNull();
+            expect(await load({ userId: testUsers.testUser.user_id, documentId: second.id })).toBeNull();
+            expect(await load({ userId: testUsers.otherUser.user_id, documentId: otherDoc.id })).not.toBeNull();
         } finally {
             await db('documents').whereIn('id', [first.id, second.id, otherDoc.id]).del();
         }
     });
 
     it('rejects a file that is not a pdf', async () => {
-        const caller = getCaller();
+        await expect(uploadPdf('notpdf.pdf', encodeBase64('this is plain text, not a pdf'))).rejects.toMatchObject({
+            code: 'UNSUPPORTED_MEDIA_TYPE',
+        });
+    });
 
+    it('rejects a declared mime type other than pdf even when the bytes are a pdf', async () => {
         await expect(
-            caller.uploadDocument({ filename: 'notpdf.pdf', content: encodeBase64('this is plain text, not a pdf') }),
-        ).rejects.toThrow();
+            getCaller().uploadDocument({
+                filename: 'mislabelled.pdf',
+                mimeType: 'text/plain',
+                content: validPdfBase64('mime-mismatch'),
+            }),
+        ).rejects.toMatchObject({ code: 'UNSUPPORTED_MEDIA_TYPE' });
+    });
+
+    it('rejects malformed base64 before decoding', async () => {
+        await expect(
+            getCaller().uploadDocument({
+                filename: 'malformed.pdf',
+                mimeType: PDF_MIME_TYPE,
+                content: 'JVBERi0 this is not base64!',
+            }),
+        ).rejects.toMatchObject({ code: 'UNSUPPORTED_MEDIA_TYPE' });
+    });
+
+    it('rejects non-canonical base64 before decoding', async () => {
+        await expect(
+            getCaller().uploadDocument({
+                filename: 'noncanonical.pdf',
+                mimeType: PDF_MIME_TYPE,
+                content: 'JVBERi1=',
+            }),
+        ).rejects.toMatchObject({ code: 'UNSUPPORTED_MEDIA_TYPE' });
     });
 
     it('rejects an oversized pdf', async () => {
-        const caller = getCaller();
         const oversized = `JVBERi0${'A'.repeat(14_000_000)}`;
 
-        await expect(caller.uploadDocument({ filename: 'huge.pdf', content: oversized })).rejects.toThrow();
+        await expect(uploadPdf('huge.pdf', oversized)).rejects.toThrow();
     });
 
-    it('rejects getting or deleting an unknown document', async () => {
-        const caller = getCaller();
-        const missing = createHash('sha256').update('never-uploaded').digest('hex');
+    it('rejects a pdf that exceeds the decoded size limit while fitting the base64 limit', async () => {
+        const buffer = Buffer.alloc(MAX_SIZE_BYTES_DOCUMENT + 2);
+        PDF_SIGNATURE.copy(buffer);
+        const content = buffer.toString('base64');
 
-        await expect(caller.getDocument({ id: missing })).rejects.toThrow();
-        await expect(caller.deleteDocument({ id: missing })).rejects.toThrow();
+        expect(content.length).toBe(4 * Math.ceil(MAX_SIZE_BYTES_DOCUMENT / 3));
+
+        await expect(uploadPdf('huge-decoded.pdf', content)).rejects.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+    });
+
+    it('rejects deleting an unknown document with a valid uuid', async () => {
+        const caller = getCaller();
+
+        await expect(caller.deleteDocument({ id: randomUUID() })).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
     it('rejects a malformed document id', async () => {
         const caller = getCaller();
 
-        await expect(caller.getDocument({ id: 'not-a-uuid' })).rejects.toThrow();
         await expect(caller.deleteDocument({ id: 'not-a-uuid' })).rejects.toThrow();
     });
 });
