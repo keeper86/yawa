@@ -20,7 +20,8 @@ declare module "nextjs-routes" {
     | StaticRoute<"/api/public/openapi.json">
     | DynamicRoute<"/api/trpc/[trpc]", { "trpc": string }>
     | StaticRoute<"/imprint">
-    | StaticRoute<"/messages">;
+    | StaticRoute<"/messages">
+    | StaticRoute<"/sources">;
 
   interface StaticRoute<Pathname> {
     pathname: Pathname;

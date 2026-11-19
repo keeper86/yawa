@@ -29,7 +29,9 @@
         "db:types:update": "node ./tools/db_types.cjs update",
         "i18n:scan": "node ./tools/i18n_scan.cjs && node ./tools/i18n_scan_literals.cjs",
         "db:waitFor": "npx wait-on --timeout=60000 tcp:localhost:5432",
-        "generate-keycloak-realm": "set -a && . ./.env && set +a && envsubst < ./keycloak/data/template.json > ./keycloak/data/import/initialRealm.json"
+        "generate-keycloak-realm": "set -a && . ./.env && set +a && envsubst < ./keycloak/data/template.json > ./keycloak/data/import/initialRealm.json",
+        "test:smoke": "vitest --run --config vitest.smoke.config.ts",
+        "embedding:debug": "tsx tools/embedding_debug.ts"
     },
     "dependencies": {
         "@radix-ui/react-accordion": "^1.2.12",

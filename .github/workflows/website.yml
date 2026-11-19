@@ -36,6 +36,8 @@ jobs:
               run: npm run format:check
             - name: Lint
               run: npm run lint:check
+            - name: Type check
+              run: npx next typegen && npx tsc --noEmit
             - name: Run unit tests
               run: npm run test:unit
             - name: Run integration tests
@@ -49,9 +51,14 @@ jobs:
                       ${{ runner.os }}-nextjs-cache-
             - name: Build
               run: npm run build
-            - name: Start Keycloak and DB with Docker Compose
+            - name: Start infrastructure and initialize embedding model
+              timeout-minutes: 15
               run: |
-                  docker compose -f docker-compose.development.yaml up -d &
+                  timeout 840s docker compose -f docker-compose.development.yaml up -d
+                  timeout 840s docker compose -f docker-compose.development.yaml up --no-deps --exit-code-from ollama-init ollama-init
+            - name: Run embedding smoke test on CPU
+              timeout-minutes: 6
+              run: npm run test:smoke
             - name: Wait for DB to be ready
               run: npx wait-on --timeout=60000 tcp:localhost:5432
             - name: Wait for keycloak to be ready
