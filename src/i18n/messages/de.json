@@ -13,6 +13,7 @@
         "avatarPngFile": "Bitte laden Sie eine PNG-Bilddatei hoch",
         "avatarFileTooLarge": "Die Dateigröße muss unter 1 MB liegen",
         "documentNotPdf": "Bitte laden Sie eine PDF-Datei hoch",
+        "invalidDocumentData": "Ungültige Base64-Dokumentdaten",
         "documentTooLarge": "Die Größe der PDF-Datei muss unter 10 MB liegen",
         "documentNotFound": "Dokument nicht gefunden"
     },
@@ -194,9 +195,6 @@
         "fileSize": "Größe",
         "uploadedAt": "Hochgeladen",
         "actions": "Aktionen",
-        "download": "Herunterladen",
-        "downloading": "Wird geladen…",
-        "downloadFailed": "Herunterladen fehlgeschlagen. Bitte versuchen Sie es erneut.",
         "delete": "Löschen",
         "deleteSuccess": "Dokument gelöscht",
         "confirmDeleteTitle": "Dokument löschen",

@@ -12,6 +12,7 @@ export const DOMAIN_ERROR_CODES = [
     'invalidAvatarData',
     'avatarPngOnly',
     'documentNotPdf',
+    'invalidDocumentData',
     'documentTooLarge',
     'documentNotFound',
 ] as const;
@@ -36,6 +37,7 @@ const CODE_BY_MESSAGE: Record<string, DomainErrorCode> = {
     'Invalid base64 image data': 'invalidAvatarData',
     'Only PNG images are supported for avatar': 'avatarPngOnly',
     'Only PDF files are supported': 'documentNotPdf',
+    'Invalid base64 document data': 'invalidDocumentData',
     'PDF file size must be less than 10MB': 'documentTooLarge',
     'Document not found': 'documentNotFound',
 };

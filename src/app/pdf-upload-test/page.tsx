@@ -16,9 +16,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useDeleteAllDocuments, useDeleteDocument, useDocuments, useUploadDocument } from '@/hooks/useDocuments';
 import { useErrorMessage } from '@/i18n/errors';
-import { trpcClient } from '@/lib/trpc';
 import { useFormatter, useTranslations } from 'next-intl';
-import { AlertCircle, Download, FileText, Loader2, Trash2, Upload } from 'lucide-react';
+import { AlertCircle, FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { toast } from 'sonner';
 
@@ -37,45 +36,6 @@ const formatBytes = (bytes: number): string => {
     }
     return `${value.toFixed(1)} ${units[unitIndex]}`;
 };
-
-function DownloadButton({
-    id,
-    filename,
-    onError,
-}: {
-    id: string;
-    filename: string;
-    onError: (message: string) => void;
-}) {
-    const t = useTranslations('Documents');
-    const [busy, setBusy] = useState(false);
-
-    const handleDownload = async () => {
-        setBusy(true);
-        try {
-            const fetched = await trpcClient.getDocument.query({ id });
-            const bytes = Uint8Array.from(atob(fetched.content), (char) => char.charCodeAt(0));
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = filename;
-            anchor.click();
-            URL.revokeObjectURL(url);
-        } catch {
-            onError(t('downloadFailed'));
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    return (
-        <Button variant='outline' size='sm' className='gap-2' disabled={busy} onClick={handleDownload}>
-            {busy ? <Loader2 className='h-4 w-4 animate-spin' /> : <Download className='h-4 w-4' />}
-            {busy ? t('downloading') : t('download')}
-        </Button>
-    );
-}
 
 export default function PdfUploadTestPage() {
     const t = useTranslations('Documents');
@@ -134,7 +94,7 @@ export default function PdfUploadTestPage() {
             const dataUrl = reader.result as string;
             const base64 = dataUrl.split(',')[1];
             upload.mutate(
-                { filename: pendingFile.name, content: base64 },
+                { filename: pendingFile.name, mimeType: pendingFile.type, content: base64 },
                 {
                     onSuccess: () => {
                         toast.success(t('uploadSuccess'));
@@ -279,11 +239,6 @@ export default function PdfUploadTestPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className='flex items-center justify-end gap-2'>
-                                                    <DownloadButton
-                                                        id={doc.id}
-                                                        filename={doc.filename}
-                                                        onError={setClientError}
-                                                    />
                                                     <Button
                                                         variant='ghost'
                                                         size='icon'

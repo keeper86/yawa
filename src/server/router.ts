@@ -1,4 +1,4 @@
-import { deleteAllDocuments, deleteDocument, getDocument, listDocuments, uploadDocument } from './controller/documents';
+import { deleteAllDocuments, deleteDocument, listDocuments, uploadDocument } from './controller/documents';
 import { health } from './controller/health';
 import { logs } from './controller/logs';
 import {
@@ -41,7 +41,6 @@ const protectedAppRouter = trpcRoot.router({
     deletePAT: deletePAT(),
     uploadDocument: uploadDocument(),
     listDocuments: listDocuments(),
-    getDocument: getDocument(),
     deleteDocument: deleteDocument(),
     deleteAllDocuments: deleteAllDocuments(),
 });
