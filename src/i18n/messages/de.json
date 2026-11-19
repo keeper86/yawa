@@ -187,6 +187,8 @@
         "uploadNow": "Hochladen",
         "uploading": "Wird hochgeladen…",
         "uploadSuccess": "PDF wurde erfolgreich hochgeladen",
+        "uploadDuplicate": "Diese PDF wurde bereits hochgeladen",
+        "uploadDuplicateOther": "Diese PDF existiert bereits als {filename}",
         "notPdf": "Bitte laden Sie eine PDF-Datei hoch",
         "fileTooLarge": "Die Größe der PDF-Datei muss unter 10 MB liegen",
         "documents": "Ihre Dokumente",

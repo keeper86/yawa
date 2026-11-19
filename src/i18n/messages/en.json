@@ -187,6 +187,8 @@
         "uploadNow": "Upload",
         "uploading": "Uploading…",
         "uploadSuccess": "PDF uploaded successfully",
+        "uploadDuplicate": "This PDF was already uploaded",
+        "uploadDuplicateOther": "This PDF already exists as {filename}",
         "notPdf": "Please upload a PDF file",
         "fileTooLarge": "PDF file size must be less than 10MB",
         "documents": "Your documents",

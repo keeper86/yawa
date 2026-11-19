@@ -96,8 +96,14 @@ export default function PdfUploadTestPage() {
             upload.mutate(
                 { filename: pendingFile.name, mimeType: pendingFile.type, content: base64 },
                 {
-                    onSuccess: () => {
-                        toast.success(t('uploadSuccess'));
+                    onSuccess: (result) => {
+                        if (!result.duplicate) {
+                            toast.success(t('uploadSuccess'));
+                        } else if (result.filename === pendingFile.name) {
+                            toast.info(t('uploadDuplicate'));
+                        } else {
+                            toast.info(t('uploadDuplicateOther', { filename: result.filename }));
+                        }
                         setPendingFile(null);
                         setClientError(null);
                     },
