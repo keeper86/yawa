@@ -28,6 +28,7 @@ playwright.config.*
 
 *.log
 *.md
+*.txt
 *.tsbuildinfo
 
 plantuml*.jar

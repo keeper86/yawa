@@ -2,6 +2,7 @@
 set -eu
 
 MODEL='embeddinggemma:300m'
+READY_TIMEOUT_SECONDS=60
 
 if [ "${1:-}" = '--check' ]; then
     exec ollama show "$MODEL" >/dev/null 2>&1
@@ -15,8 +16,8 @@ trap 'kill -TERM "$server_pid" 2>/dev/null || true; exit 0' TERM INT
 attempts=0
 until ollama list >/dev/null 2>&1; do
     attempts=$((attempts + 1))
-    if [ "$attempts" -ge 60 ]; then
-        echo 'Ollama did not become ready within 60 seconds.' >&2
+    if [ "$attempts" -ge "$READY_TIMEOUT_SECONDS" ]; then
+        echo "Ollama did not become ready within ${READY_TIMEOUT_SECONDS} seconds." >&2
         exit 1
     fi
     sleep 1

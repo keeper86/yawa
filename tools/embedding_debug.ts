@@ -1,6 +1,13 @@
 import dotenv from 'dotenv';
 import { readFile } from 'node:fs/promises';
-import { EMBEDDING_MODEL, EmbeddingError, embedText, embedTexts } from '../src/server/embedding';
+import {
+    EMBEDDING_MODEL,
+    EmbeddingError,
+    embedDocuments,
+    embedQuery,
+    embedText,
+    embedTexts,
+} from '../src/server/embedding';
 
 dotenv.config({ override: false, quiet: true });
 
@@ -8,12 +15,17 @@ const usage = `Usage:
   npm run embedding:debug -- "Text to embed"
   npm run embedding:debug -- --query "Search query" "First text" "Second text" ...
   npm run embedding:debug -- --query "Search query" --file texts.json
+  npm run embedding:debug -- --raw "Text to embed"
 
 --file accepts a JSON array of strings. Files and text arguments can be combined.
-Results are ranked by cosine distance (lower is closer). Use -- before texts that start with --.`;
+Queries and documents use the EmbeddingGemma task prompts; --raw sends the text unchanged.
+Rankings use cosine distance (lower is closer). Use -- before texts that start with --.`;
+
+const prefix = (raw: boolean) => (raw ? 'none' : 'embeddinggemma-task');
 
 async function parseArgs(args: string[]) {
     let query: string | undefined;
+    let raw = false;
     const texts: string[] = [];
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
@@ -21,7 +33,9 @@ async function parseArgs(args: string[]) {
             texts.push(...args.slice(i + 1));
             break;
         }
-        if (arg === '--query' || arg === '--file') {
+        if (arg === '--raw') {
+            raw = true;
+        } else if (arg === '--query' || arg === '--file') {
             const value = args[++i];
             if (value === undefined || value.startsWith('--')) {
                 throw new Error(`Missing value for ${arg}.\n${usage}`);
@@ -43,7 +57,7 @@ async function parseArgs(args: string[]) {
         }
     }
     if (texts.length === 0) throw new Error(`Provide at least one text.\n${usage}`);
-    return { query, texts };
+    return { query, raw, texts };
 }
 
 function cosineDistance(left: number[], right: number[]) {
@@ -59,11 +73,13 @@ async function main() {
         console.log(usage);
         return;
     }
-    const { query, texts } = await parseArgs(args);
+    const { query, raw, texts } = await parseArgs(args);
+    const embedQueryText = raw ? embedText : embedQuery;
+    const embedDocumentTexts = raw ? embedTexts : embedDocuments;
     const start = performance.now();
     if (query !== undefined) {
-        const queryVector = await embedText(query);
-        const vectors = await embedTexts(texts);
+        const queryVector = await embedQueryText(query);
+        const vectors = await embedDocumentTexts(texts);
         const results = texts.map((text, index) => ({
             index: index + 1,
             text,
@@ -74,6 +90,7 @@ async function main() {
             JSON.stringify(
                 {
                     model: EMBEDDING_MODEL,
+                    prompts: prefix(raw),
                     dimension: queryVector.length,
                     query,
                     elapsedMs: performance.now() - start,
@@ -85,15 +102,19 @@ async function main() {
         );
         return;
     }
-    const vector = await embedText(texts.join(' '));
+    const vectors = await embedDocumentTexts(texts);
     console.log(
         JSON.stringify(
             {
                 model: EMBEDDING_MODEL,
-                dimension: vector.length,
-                norm: Math.hypot(...vector),
+                prompts: prefix(raw),
                 elapsedMs: performance.now() - start,
-                vector,
+                texts: texts.map((text, index) => ({
+                    text,
+                    dimension: vectors[index].length,
+                    norm: Math.hypot(...vectors[index]),
+                    vector: vectors[index],
+                })),
             },
             null,
             2,

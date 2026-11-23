@@ -52,8 +52,10 @@ jobs:
             - name: Build
               run: npm run build
             - name: Start infrastructure and initialize embedding model
-              timeout-minutes: 15
-              run: timeout 840s npm run infra:up
+              timeout-minutes: 16
+              run: npm run infra:up
+            - name: Verify embeddings against the running model
+              run: npm run embedding:smoke
             - name: Wait for DB to be ready
               run: npx wait-on --timeout=60000 tcp:localhost:5432
             - name: Wait for keycloak to be ready

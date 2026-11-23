@@ -31,9 +31,37 @@ function respond(body: unknown, status = 200) {
     );
 }
 
+function stubTimeout() {
+    const signal = AbortSignal.abort(new DOMException('Embedding request timed out.', 'TimeoutError'));
+    return vi.spyOn(AbortSignal, 'timeout').mockReturnValue(signal);
+}
+
+function hangingFetch(phase: 'connection' | 'body' | 'error body') {
+    const rejectOnAbort = (signal: AbortSignal) =>
+        new Promise<never>((_, reject) => {
+            if (signal.aborted) {
+                reject(signal.reason);
+            }
+            signal.addEventListener('abort', () => reject(signal.reason));
+        });
+    return vi.fn().mockImplementation((_url: URL, init: RequestInit) => {
+        const signal = init.signal as AbortSignal;
+        if (phase === 'connection') {
+            return rejectOnAbort(signal);
+        }
+        return Promise.resolve({
+            ok: phase === 'body',
+            status: phase === 'body' ? 200 : 503,
+            json: () => rejectOnAbort(signal),
+            text: () => rejectOnAbort(signal),
+        });
+    });
+}
+
 afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
     vi.useRealTimers();
 });
 
@@ -138,9 +166,7 @@ describe('embedText', () => {
     it.each([
         null,
         {},
-        { embeddings: [] },
         { embeddings: [[]] },
-        { embeddings: [vector, vector] },
         { embeddings: [vector.slice(1)] },
         { embeddings: [[...vector, 0]] },
         { embeddings: [{ length: 768 }] },
@@ -149,6 +175,16 @@ describe('embedText', () => {
     ])('rejects invalid vector responses %#', async (body) => {
         respond(body);
         await expect(embedText('')).rejects.toThrow('Embedding service returned an invalid vector.');
+    });
+
+    it('reports how many vectors came back', async () => {
+        respond({ embeddings: [] });
+
+        await expect(embedText('')).rejects.toMatchObject({
+            name: 'EmbeddingError',
+            message: 'Embedding service returned 0 of 1 vectors.',
+            status: 200,
+        });
     });
 
     it.each([NaN, Infinity, -Infinity])('rejects nonfinite components %s', async (value) => {
@@ -163,41 +199,31 @@ describe('embedText', () => {
         await expect(embedText('text')).rejects.toBeInstanceOf(EmbeddingError);
     });
 
-    it.each(['connection', 'body', 'error body'])('bounds the entire request while waiting for %s', async (phase) => {
-        vi.useFakeTimers();
-        const pending = new Promise(() => {});
-        vi.stubGlobal(
-            'fetch',
-            vi.fn().mockImplementation(() =>
-                phase === 'connection'
-                    ? pending
-                    : Promise.resolve({
-                          ok: phase === 'body',
-                          status: phase === 'body' ? 200 : 503,
-                          json: () => pending,
-                          text: () => pending,
-                      }),
-            ),
-        );
-        const result = embedText('private text');
-        const assertion = expect(result).rejects.toMatchObject({
-            name: 'EmbeddingError',
-            message: 'Embedding request timed out.',
-            status: phase === 'connection' ? undefined : phase === 'body' ? 200 : 503,
-            cause: expect.objectContaining({ name: 'TimeoutError' }),
-        });
-        await vi.advanceTimersByTimeAsync(EMBEDDING_TIMEOUT_MS);
-        await assertion;
-        expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(fetch).mock.calls[0][1]?.signal?.aborted).toBe(true);
-        expect(vi.getTimerCount()).toBe(0);
-    });
+    it.each(['connection', 'body', 'error body'] as const)(
+        'bounds the entire request while waiting for the %s',
+        async (phase) => {
+            const timeout = stubTimeout();
+            vi.stubGlobal('fetch', hangingFetch(phase));
 
-    it('clears the request timer after success', async () => {
-        vi.useFakeTimers();
+            await expect(embedText('private text')).rejects.toMatchObject({
+                name: 'EmbeddingError',
+                message: 'Embedding request timed out.',
+                status: phase === 'connection' ? undefined : phase === 'body' ? 200 : 503,
+                cause: expect.objectContaining({ name: 'TimeoutError' }),
+            });
+            expect(timeout).toHaveBeenCalledWith(EMBEDDING_TIMEOUT_MS);
+            expect(fetch).toHaveBeenCalledTimes(1);
+        },
+    );
+
+    it('bounds every request with EMBEDDING_TIMEOUT_MS', async () => {
+        const timeout = vi.spyOn(AbortSignal, 'timeout');
         respond({ embeddings: [vector] });
+
         await embedText('text');
-        expect(vi.getTimerCount()).toBe(0);
+
+        expect(timeout).toHaveBeenCalledExactlyOnceWith(EMBEDDING_TIMEOUT_MS);
+        expect(vi.mocked(fetch).mock.calls[0][1]?.signal).toBe(timeout.mock.results[0].value);
     });
 });
 
@@ -260,7 +286,7 @@ describe('embedTexts', () => {
     it('rejects when the service returns a different number of vectors', async () => {
         respond({ embeddings: [vector] });
 
-        await expect(embedTexts(['first', 'second'])).rejects.toThrow('Embedding service returned an invalid vector.');
+        await expect(embedTexts(['first', 'second'])).rejects.toThrow('Embedding service returned 1 of 2 vectors.');
     });
 
     it('rejects when any vector in a batch is invalid', async () => {
@@ -270,23 +296,16 @@ describe('embedTexts', () => {
     });
 
     it('bounds a batch request with the same timeout', async () => {
-        vi.useFakeTimers();
-        vi.stubGlobal(
-            'fetch',
-            vi.fn().mockImplementation(() => new Promise(() => {})),
-        );
+        stubTimeout();
+        vi.stubGlobal('fetch', hangingFetch('connection'));
 
-        const result = embedTexts(['first', 'second']);
-        const assertion = expect(result).rejects.toMatchObject({
+        await expect(embedTexts(['first', 'second'])).rejects.toMatchObject({
             name: 'EmbeddingError',
             message: 'Embedding request timed out.',
             status: undefined,
             cause: expect.objectContaining({ name: 'TimeoutError' }),
         });
-        await vi.advanceTimersByTimeAsync(EMBEDDING_TIMEOUT_MS);
-        await assertion;
-        expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
-        expect(vi.getTimerCount()).toBe(0);
+        expect(fetch).toHaveBeenCalledTimes(1);
     });
 });
 

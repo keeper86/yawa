@@ -139,7 +139,8 @@ batch endpoint takes an array, so a 100-chunk document costs 13 requests instead
 The model is fixed to `embeddinggemma:300m`, with the full 768-dimensional output. Production
 (`docker-compose.yaml`) and development (`docker-compose.development.yaml`) each define the same Ollama
 service; development only adds the published host port. The model tag lives in
-`docker/ollama-entrypoint.sh` and `src/server/embedding.ts`.
+`docker/ollama-entrypoint.sh` and `src/server/embedding.ts`; `npm run embedding:smoke` fails when the two
+drift.
 This release introduced [EmbeddingGemma support](https://github.com/ollama/ollama/releases/tag/v0.11.10).
 Inference runs on CPU with no GPU devices assigned.
 
@@ -165,8 +166,9 @@ development value. Production starts with `docker compose up -d`; development wi
 
 The module sends raw text unchanged to `/api/embed` with `truncate: false` through `embedText` and
 `embedTexts`; the role-aware helpers only add the model prompt. It never trims or rejects strings based
-on their contents. Non-string input throws `TypeError`. Empty and whitespace-only strings reach Ollama,
-but an empty or malformed embedding response is rejected. Over-context input is sent without truncation
+on their contents. Non-string input throws `TypeError`. Empty and whitespace-only strings reach Ollama;
+Ollama answers an empty string with no vector at all, which the module reports as a vector-count
+mismatch (`Embedding service returned 0 of 1 vectors.`). Over-context input is sent without truncation
 so the service can reject it. See the [Ollama embedding API](https://docs.ollama.com/api/embed).
 
 All service, transport, timeout, JSON and vector validation failures throw `EmbeddingError`.
@@ -175,11 +177,13 @@ response), otherwise `undefined`. Its standard `cause` retains the original exce
 exception, or HTTP error response body. Invalid vector shapes have no underlying exception, and a
 missing production `OLLAMA_BASE_URL` is reported the same way. Messages contain neither submitted text
 nor service response bodies; the module never logs input. Treat `cause` as potentially sensitive if
-you log it. Each attempt has a fixed 120-second timeout covering connection, model loading, inference
-and response-body reading. A batch is all-or-nothing: if any vector is missing, has the wrong
-dimension or contains a non-finite value, the whole call rejects. Transport failures, HTTP 429 and 5xx
-are retried up to `EMBEDDING_MAX_ATTEMPTS` (3) with a 250/500 ms backoff. HTTP 4xx, invalid
-JSON/vectors, missing configuration and timeouts are not retried. Every request sets
+you log it. Each attempt is bounded by `EMBEDDING_TIMEOUT_MS` (30 s) through `AbortSignal.timeout`, which
+covers connection, model loading, inference and response-body reading; the timeout aborts a hung body
+read as well. 30 s is roughly thirty times the measured cold call, and the worst case for one batch
+stays below 91 s (three attempts plus the 250/500 ms backoff). A batch is all-or-nothing: if any vector
+is missing, has the wrong dimension or contains a non-finite value, the whole call rejects. Transport
+failures, HTTP 429 and 5xx are retried up to `EMBEDDING_MAX_ATTEMPTS` (3) with a 250/500 ms backoff.
+HTTP 4xx, invalid JSON/vectors, missing configuration and timeouts are not retried. Every request sets
 `keep_alive: EMBEDDING_KEEP_ALIVE` (30m) so the model stays loaded between calls. There are no fallback
 vectors, model substitutions, or model downloads in application code.
 
@@ -187,13 +191,28 @@ After `npm run infra:up`:
 
 ```sh
 npm run embedding:debug -- "Text to embed"
+npm run embedding:debug -- --query "How do I grow tomatoes?" "Tomatoes need warm soil." "Invoices are monthly."
+npm run embedding:debug -- --raw "Unprefixed text"
 ```
 
-The debugging utility loads `.env` without overriding explicitly supplied environment values, calls
-the same module, and prints the vector, model, dimension, norm and elapsed milliseconds; errors produce
-a nonzero exit status. An explicitly supplied empty argument is supported. Mocked module tests,
-including single and batched requests, run in the server suite's `embedding` project without a
-database:
+The debugging utility loads `.env` without overriding explicitly supplied environment values, calls the
+same module and prints JSON: the model, whether the EmbeddingGemma prompts were applied, and either one
+entry per text (dimension, norm, vector) or a ranked list for `--query`. `--query` uses `embedQuery` and
+`embedDocuments`, so a ranking here is the ranking retrieval sees; `--raw` switches both sides to
+`embedText`/`embedTexts` for prompt experiments. Errors produce a nonzero exit status. An explicitly
+supplied empty argument is supported.
+
+`npm run embedding:smoke` is the fast check CI runs right after `npm run infra:up`. It verifies that
+`docker/ollama-entrypoint.sh` pins the model the client requests, embeds one question and three
+documents through the role-aware helpers, asserts 768 finite numbers and that the matching document
+ranks first, and prints the ranking. Any failed request or assertion exits nonzero:
+
+```sh
+npm run embedding:smoke
+```
+
+Mocked module tests, including single and batched requests, run in the server suite's `embedding`
+project without a database:
 
 ```sh
 npm run test:server -- --project embedding
@@ -234,7 +253,7 @@ The manual debugging command passed through the shared module.
 | First download into an empty temporary cache       | Approximately 13.4 seconds (network-dependent)                                                   |
 | First embedding after model download               | HTTP 200, one 768-value vector; 959 ms wall time, including 812 ms reported load time            |
 | Subsequent unrelated text                          | HTTP 200, one 768-value vector; 217 ms wall time                                                 |
-| Empty string                                       | HTTP 200 with `embeddings: []`; the module rejects this as an invalid vector                     |
+| Empty string                                       | HTTP 200 with `embeddings: []`; the module reports a vector-count mismatch                       |
 | Whitespace only (`"   \n\t"`)                      | HTTP 200, one 768-value vector                                                                   |
 | 5,000 repetitions of `"hello "`, `truncate: false` | HTTP 400, `{"error":"input length exceeds maximum context length"}`                              |
 | Missing model                                      | HTTP 404, error body identifying the missing model and suggesting a pull                         |
@@ -243,7 +262,7 @@ The manual debugging command passed through the shared module.
 A pull that runs reuses cached layers (approximately 0.81 seconds in this run). Every start attempts
 `ollama pull` to refresh the tag; if the registry is unavailable, the entrypoint falls back to the
 cached model via `ollama show`, so a warm restart works offline. These are individual observations on
-the implementation host, not deployment performance guarantees. Each attempt has a fixed 120-second
+the implementation host, not deployment performance guarantees. Each attempt has a fixed 30-second
 timeout and timeouts are not retried. Requests use a 30-minute `keep_alive`, so shorter idle periods do
 not pay the cold load again. Review the timeout and keep-alive on deployment hardware. No latency or
 RAM budget has been established. Service-side 5xx failures were covered by mocked HTTP tests rather
