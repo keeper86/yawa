@@ -2,6 +2,9 @@ export const EMBEDDING_MODEL = 'embeddinggemma:300m';
 export const EMBEDDING_DIMENSION = 768;
 export const EMBEDDING_TIMEOUT_MS = 120_000;
 export const EMBEDDING_BATCH_SIZE = 8;
+export const EMBEDDING_MAX_ATTEMPTS = 3;
+export const EMBEDDING_RETRY_DELAY_MS = 250;
+export const EMBEDDING_KEEP_ALIVE = '30m';
 
 const QUERY_PREFIX = 'task: question answering | query: ';
 const DOCUMENT_PREFIX = 'title: none | text: ';
@@ -16,6 +19,8 @@ export class EmbeddingError extends Error {
         this.name = 'EmbeddingError';
     }
 }
+
+class RetryableEmbeddingError extends EmbeddingError {}
 
 const resolveBaseUrl = (): string => {
     const configured = process.env.OLLAMA_BASE_URL;
@@ -45,8 +50,16 @@ const parseEmbeddings = (body: unknown, expectedVectors: number, status: number 
     return embeddings as number[][];
 };
 
+const resolveEndpoint = (baseUrl: string): URL => {
+    try {
+        return new URL('/api/embed', baseUrl);
+    } catch (cause) {
+        throw new EmbeddingError('Embedding service URL is invalid.', undefined, cause);
+    }
+};
+
 const requestEmbeddings = async (input: string | string[]): Promise<number[][]> => {
-    const baseUrl = resolveBaseUrl();
+    const endpoint = resolveEndpoint(resolveBaseUrl());
     const expectedVectors = typeof input === 'string' ? 1 : input.length;
     const controller = new AbortController();
     let status: number | undefined;
@@ -62,19 +75,33 @@ const requestEmbeddings = async (input: string | string[]): Promise<number[][]> 
     try {
         return await Promise.race([
             (async () => {
-                const response = await fetch(new URL('/api/embed', baseUrl), {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: EMBEDDING_MODEL, input, truncate: false }),
+                    body: JSON.stringify({
+                        model: EMBEDDING_MODEL,
+                        input,
+                        truncate: false,
+                        keep_alive: EMBEDDING_KEEP_ALIVE,
+                    }),
                     signal: controller.signal,
                 });
-                status = response.status;
+                const responseStatus = response.status;
+                status = responseStatus;
                 if (!response.ok) {
                     const body = await response.text();
-                    throw new EmbeddingError('Embedding service rejected the request.', status, body);
+                    const message = 'Embedding service rejected the request.';
+                    throw responseStatus === 429 || responseStatus >= 500
+                        ? new RetryableEmbeddingError(message, responseStatus, body)
+                        : new EmbeddingError(message, responseStatus, body);
                 }
 
-                const body: unknown = await response.json();
+                let body: unknown;
+                try {
+                    body = await response.json();
+                } catch (cause) {
+                    throw new EmbeddingError('Embedding service returned invalid JSON.', status, cause);
+                }
                 return parseEmbeddings(body, expectedVectors, status);
             })(),
             timeout,
@@ -83,9 +110,24 @@ const requestEmbeddings = async (input: string | string[]): Promise<number[][]> 
         if (cause instanceof EmbeddingError) {
             throw cause;
         }
-        throw new EmbeddingError('Embedding request failed.', status, cause);
+        throw new RetryableEmbeddingError('Embedding request failed.', status, cause);
     } finally {
         clearTimeout(timer);
+    }
+};
+
+const requestWithRetry = async (input: string | string[]): Promise<number[][]> => {
+    for (let attempt = 1; ; attempt += 1) {
+        try {
+            return await requestEmbeddings(input);
+        } catch (error) {
+            if (!(error instanceof RetryableEmbeddingError) || attempt >= EMBEDDING_MAX_ATTEMPTS) {
+                throw error;
+            }
+            await new Promise<void>((resolve) => {
+                setTimeout(resolve, EMBEDDING_RETRY_DELAY_MS * attempt);
+            });
+        }
     }
 };
 
@@ -97,7 +139,7 @@ const assertText = (text: unknown): void => {
 
 export async function embedText(text: string): Promise<number[]> {
     assertText(text);
-    const [vector] = await requestEmbeddings(text);
+    const [vector] = await requestWithRetry(text);
     return vector;
 }
 
@@ -111,7 +153,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
 
     const vectors: number[][] = [];
     for (let start = 0; start < texts.length; start += EMBEDDING_BATCH_SIZE) {
-        vectors.push(...(await requestEmbeddings(texts.slice(start, start + EMBEDDING_BATCH_SIZE))));
+        vectors.push(...(await requestWithRetry(texts.slice(start, start + EMBEDDING_BATCH_SIZE))));
     }
     return vectors;
 }

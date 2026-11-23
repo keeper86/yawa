@@ -13,9 +13,7 @@ certs/
 
 test/
 test-results/
-tests/*
-!tests/smoke/
-!tests/smoke/**
+tests/
 
 # Exclude local scripts and config not needed in image
 

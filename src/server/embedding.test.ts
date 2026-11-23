@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
     EMBEDDING_BATCH_SIZE,
+    EMBEDDING_KEEP_ALIVE,
+    EMBEDDING_MAX_ATTEMPTS,
     EMBEDDING_MODEL,
+    EMBEDDING_RETRY_DELAY_MS,
     EMBEDDING_TIMEOUT_MS,
     EmbeddingError,
     embedDocument,
@@ -13,8 +16,19 @@ import {
 
 const vector = Array.from({ length: 768 }, (_, index) => index / 768);
 
+const expectedBody = (input: unknown) =>
+    JSON.stringify({
+        model: EMBEDDING_MODEL,
+        input,
+        truncate: false,
+        keep_alive: EMBEDDING_KEEP_ALIVE,
+    });
+
 function respond(body: unknown, status = 200) {
-    return vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
+    return vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(body), { status }))),
+    );
 }
 
 afterEach(() => {
@@ -34,7 +48,7 @@ describe('embedText', () => {
             expect(fetch).toHaveBeenCalledExactlyOnceWith(new URL('http://embedding.internal:11434/api/embed'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: EMBEDDING_MODEL, input: text, truncate: false }),
+                body: expectedBody(text),
                 signal: expect.any(AbortSignal),
             });
         },
@@ -68,23 +82,45 @@ describe('embedText', () => {
         expect(request).not.toHaveBeenCalled();
     });
 
-    it('preserves transport failures as the cause', async () => {
+    it('preserves transport failures after retrying', async () => {
+        vi.useFakeTimers();
         const cause = new TypeError('Connection refused');
-        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(cause));
-        await expect(embedText('text')).rejects.toMatchObject({ name: 'EmbeddingError', cause, status: undefined });
+        const request = vi.fn().mockRejectedValue(cause);
+        vi.stubGlobal('fetch', request);
+
+        const result = embedText('text');
+        const assertion = expect(result).rejects.toMatchObject({
+            name: 'EmbeddingError',
+            cause,
+            status: undefined,
+        });
+        await vi.advanceTimersByTimeAsync(EMBEDDING_RETRY_DELAY_MS * EMBEDDING_MAX_ATTEMPTS);
+        await assertion;
+        expect(request).toHaveBeenCalledTimes(EMBEDDING_MAX_ATTEMPTS);
     });
 
-    it.each([400, 404, 500, 503])(
+    it.each([400, 404, 429, 500, 503])(
         'preserves HTTP status %i and the error body without exposing it in the message',
         async (status) => {
+            const retryable = status === 429 || status >= 500;
+            if (retryable) {
+                vi.useFakeTimers();
+            }
             const body = { error: 'service detail' };
             respond(body, status);
-            await expect(embedText('private text')).rejects.toMatchObject({
+
+            const result = embedText('private text');
+            const assertion = expect(result).rejects.toMatchObject({
                 name: 'EmbeddingError',
                 message: 'Embedding service rejected the request.',
                 status,
                 cause: JSON.stringify(body),
             });
+            if (retryable) {
+                await vi.advanceTimersByTimeAsync(EMBEDDING_RETRY_DELAY_MS * EMBEDDING_MAX_ATTEMPTS);
+            }
+            await assertion;
+            expect(fetch).toHaveBeenCalledTimes(retryable ? EMBEDDING_MAX_ATTEMPTS : 1);
         },
     );
 
@@ -92,9 +128,11 @@ describe('embedText', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('invalid json')));
         await expect(embedText('text')).rejects.toMatchObject({
             name: 'EmbeddingError',
+            message: 'Embedding service returned invalid JSON.',
             status: 200,
             cause: expect.any(SyntaxError),
         });
+        expect(fetch).toHaveBeenCalledTimes(1);
     });
 
     it.each([
@@ -150,6 +188,7 @@ describe('embedText', () => {
         });
         await vi.advanceTimersByTimeAsync(EMBEDDING_TIMEOUT_MS);
         await assertion;
+        expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
         expect(vi.mocked(fetch).mock.calls[0][1]?.signal?.aborted).toBe(true);
         expect(vi.getTimerCount()).toBe(0);
     });
@@ -173,7 +212,7 @@ describe('embedTexts', () => {
         expect(fetch).toHaveBeenCalledExactlyOnceWith(new URL('http://embedding.internal:11434/api/embed'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: EMBEDDING_MODEL, input: ['first', 'second'], truncate: false }),
+            body: expectedBody(['first', 'second']),
             signal: expect.any(AbortSignal),
         });
     });
@@ -246,7 +285,62 @@ describe('embedTexts', () => {
         });
         await vi.advanceTimersByTimeAsync(EMBEDDING_TIMEOUT_MS);
         await assertion;
+        expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
         expect(vi.getTimerCount()).toBe(0);
+    });
+});
+
+describe('retries', () => {
+    it('retries a transport failure and succeeds', async () => {
+        vi.useFakeTimers();
+        const request = vi
+            .fn()
+            .mockRejectedValueOnce(new TypeError('Connection refused'))
+            .mockImplementationOnce(() => Promise.resolve(new Response(JSON.stringify({ embeddings: [vector] }))));
+        vi.stubGlobal('fetch', request);
+
+        const result = embedText('text');
+        await vi.advanceTimersByTimeAsync(EMBEDDING_RETRY_DELAY_MS);
+        await expect(result).resolves.toEqual(vector);
+        expect(request).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries a server error and succeeds', async () => {
+        vi.useFakeTimers();
+        const request = vi
+            .fn()
+            .mockImplementationOnce(() => Promise.resolve(new Response('busy', { status: 503 })))
+            .mockImplementationOnce(() => Promise.resolve(new Response(JSON.stringify({ embeddings: [vector] }))));
+        vi.stubGlobal('fetch', request);
+
+        const result = embedText('text');
+        await vi.advanceTimersByTimeAsync(EMBEDDING_RETRY_DELAY_MS);
+        await expect(result).resolves.toEqual(vector);
+        expect(request).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry a client error', async () => {
+        const request = vi.fn().mockImplementation(() => Promise.resolve(new Response('bad', { status: 400 })));
+        vi.stubGlobal('fetch', request);
+
+        await expect(embedText('text')).rejects.toMatchObject({ status: 400 });
+        expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses increasing backoff before giving up', async () => {
+        vi.useFakeTimers();
+        const request = vi.fn().mockRejectedValue(new TypeError('Connection refused'));
+        vi.stubGlobal('fetch', request);
+
+        const result = embedText('text');
+        const assertion = expect(result).rejects.toBeInstanceOf(EmbeddingError);
+        await vi.advanceTimersByTimeAsync(EMBEDDING_RETRY_DELAY_MS - 1);
+        expect(request).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(request).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(EMBEDDING_RETRY_DELAY_MS * 2);
+        await assertion;
+        expect(request).toHaveBeenCalledTimes(EMBEDDING_MAX_ATTEMPTS);
     });
 });
 
@@ -258,11 +352,7 @@ describe('role-aware helpers', () => {
         expect(fetch).toHaveBeenCalledExactlyOnceWith(
             expect.any(URL),
             expect.objectContaining({
-                body: JSON.stringify({
-                    model: EMBEDDING_MODEL,
-                    input: 'task: question answering | query: How do I grow tomatoes?',
-                    truncate: false,
-                }),
+                body: expectedBody('task: question answering | query: How do I grow tomatoes?'),
             }),
         );
     });
@@ -274,11 +364,7 @@ describe('role-aware helpers', () => {
         expect(fetch).toHaveBeenCalledExactlyOnceWith(
             expect.any(URL),
             expect.objectContaining({
-                body: JSON.stringify({
-                    model: EMBEDDING_MODEL,
-                    input: 'title: none | text: Tomatoes need warm soil.',
-                    truncate: false,
-                }),
+                body: expectedBody('title: none | text: Tomatoes need warm soil.'),
             }),
         );
     });
@@ -291,11 +377,7 @@ describe('role-aware helpers', () => {
         expect(fetch).toHaveBeenCalledExactlyOnceWith(
             expect.any(URL),
             expect.objectContaining({
-                body: JSON.stringify({
-                    model: EMBEDDING_MODEL,
-                    input: ['title: none | text: first', 'title: none | text: second'],
-                    truncate: false,
-                }),
+                body: expectedBody(['title: none | text: first', 'title: none | text: second']),
             }),
         );
     });

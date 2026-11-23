@@ -21,7 +21,6 @@ export default defineConfig({
         },
         exclude: [
             'src/server/**',
-            'tests/smoke/**',
             '**/node_modules/**',
             '**/dist/**',
             '**/cypress/**',

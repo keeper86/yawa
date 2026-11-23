@@ -22,11 +22,7 @@ until ollama list >/dev/null 2>&1; do
     sleep 1
 done
 
-if ollama show "$MODEL" >/dev/null 2>&1; then
-    echo "Model $MODEL is already available."
-else
-    echo "Pulling model $MODEL."
-    ollama pull "$MODEL"
-fi
+echo "Pulling model $MODEL; a cached copy is used if the registry is unavailable."
+ollama pull "$MODEL" || ollama show "$MODEL"
 
 wait "$server_pid"

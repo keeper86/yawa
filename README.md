@@ -95,7 +95,6 @@ Runs formatting, linting, type-checking and all tests. The CI pipeline (`.github
 npm run test:unit       # jsdom unit/component tests (vitest)
 npm run test:server     # integration tests against a throwaway Postgres (testcontainers)
 npm run test:e2e        # Playwright end-to-end tests
-npm run test:smoke      # real CPU embeddings; run npm run infra:up first
 ```
 
 ## Types
@@ -145,16 +144,17 @@ This release introduced [EmbeddingGemma support](https://github.com/ollama/ollam
 Inference runs on CPU with no GPU devices assigned.
 
 Ollama is one unit, not a daemon plus a separate initializer: `docker/ollama-entrypoint.sh` starts
-`ollama serve`, waits for the daemon, checks `ollama show` and pulls the model only when it is missing.
-The healthcheck calls the same script with `--check`, so `service_healthy` means "daemon running and
-model ready". Containerized apps and the smoke runner depend on that health, and `npm run infra:up` is
-a single `docker compose up -d --wait` that returns only when Ollama, the database and Keycloak are
-healthy.
+`ollama serve`, waits for the daemon, attempts `ollama pull` to refresh the tag and falls back to the
+cached model (`ollama show`) when the registry is unavailable. The healthcheck calls the same script
+with `--check`, so `service_healthy` means "daemon running and model ready". Containerized apps depend
+on that health, and `npm run infra:up` is a single `docker compose up -d --wait` that returns only when
+Ollama, the database and Keycloak are healthy.
 
 The first startup requires internet access to pull the image and download the model (approximately
-622 MB). Model files persist in the `ollama_data` named volume, so a warm start skips the pull and needs
-no registry access. `docker compose down` retains volumes; avoid `down -v` if you want to retain model
-and database data. A failed pull exits the container and prevents dependent services from starting.
+622 MB). Model files persist in the `ollama_data` named volume. Every start attempts `ollama pull` to
+refresh the tag and falls back to the cached model when the registry is unavailable, so a warm start
+works offline. `docker compose down` retains volumes; avoid `down -v` if you want to retain model and
+database data. Startup fails only when neither the registry nor the cache can provide the model.
 CI bounds infrastructure startup and model download to 15 minutes.
 
 Development publishes Ollama only on `127.0.0.1:11434`. Without `OLLAMA_BASE_URL` the module falls
@@ -175,42 +175,29 @@ response), otherwise `undefined`. Its standard `cause` retains the original exce
 exception, or HTTP error response body. Invalid vector shapes have no underlying exception, and a
 missing production `OLLAMA_BASE_URL` is reported the same way. Messages contain neither submitted text
 nor service response bodies; the module never logs input. Treat `cause` as potentially sensitive if
-you log it. Each request has a fixed 120-second timeout covering connection, model loading, inference
+you log it. Each attempt has a fixed 120-second timeout covering connection, model loading, inference
 and response-body reading. A batch is all-or-nothing: if any vector is missing, has the wrong
-dimension or contains a non-finite value, the whole call rejects. There are no retries, fallback
+dimension or contains a non-finite value, the whole call rejects. Transport failures, HTTP 429 and 5xx
+are retried up to `EMBEDDING_MAX_ATTEMPTS` (3) with a 250/500 ms backoff. HTTP 4xx, invalid
+JSON/vectors, missing configuration and timeouts are not retried. Every request sets
+`keep_alive: EMBEDDING_KEEP_ALIVE` (30m) so the model stays loaded between calls. There are no fallback
 vectors, model substitutions, or model downloads in application code.
 
 After `npm run infra:up`:
 
 ```sh
-npm run test:smoke
 npm run embedding:debug -- "Text to embed"
 ```
 
-Both commands load `.env` without overriding explicitly supplied environment values. The smoke suite
-uses Node.js, calls the real shared module, and checks that the vectors are valid and that a related
-sentence ranks closer to the question than an unrelated one. It is excluded from the browser suite
-and has no database setup. Mocked module tests, including single and batched requests, run in the
-server suite's `embedding` project without a database:
+The debugging utility loads `.env` without overriding explicitly supplied environment values, calls
+the same module, and prints the vector, model, dimension, norm and elapsed milliseconds; errors produce
+a nonzero exit status. An explicitly supplied empty argument is supported. Mocked module tests,
+including single and batched requests, run in the server suite's `embedding` project without a
+database:
 
 ```sh
 npm run test:server -- --project embedding
 ```
-
-The separate debugging utility prints the vector, model, dimension, norm and elapsed milliseconds;
-errors produce a nonzero exit status. An explicitly supplied empty argument is supported.
-
-An optional Docker runner includes Vitest, TypeScript source and the debugging utility, independently
-of the Next.js production image. Building it on a deployment host requires a repository checkout and
-access to dependency downloads. No Ollama host port is needed:
-
-```sh
-docker compose -f docker-compose.yaml --profile embedding-smoke run --build --rm embedding-smoke
-docker compose -f docker-compose.yaml --profile embedding-smoke run --build --rm embedding-smoke npm run embedding:debug -- "Text to embed"
-```
-
-The profile keeps the runner out of normal application startup; it is only defined in the production
-stack. Use `npm run test:smoke` for the host-run development setup.
 
 ### Embedding research
 
@@ -240,7 +227,7 @@ Ollama model reports `num_ctx: 2048`, so the ceiling is effectively the full con
 Verified on 2026-11-06 and re-verified on 2026-11-23 using the official Ollama 0.11.10 Linux runtime on
 CPU (no GPU offload), with the same fixed model as Compose. The full downloaded model manifest digest was
 `sha256:85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1` (621,875,917 bytes of model data).
-The real Vitest smoke suite and manual debugging command passed through the shared module.
+The manual debugging command passed through the shared module.
 
 | Probe                                              | Observed result                                                                                  |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -253,14 +240,14 @@ The real Vitest smoke suite and manual debugging command passed through the shar
 | Missing model                                      | HTTP 404, error body identifying the missing model and suggesting a pull                         |
 | Numeric input sent directly to Ollama              | HTTP 400, `{"error":"invalid input type"}`; module callers are rejected earlier with `TypeError` |
 
-A pull that runs reuses cached layers (approximately 0.81 seconds in this run); the entrypoint skips
-the pull entirely when `ollama show` finds the model, so a warm restart needs no registry access.
-The smoke suite also passed after restarting the standalone daemon with the same cache. A temporary
-service returning zero-norm vectors confirmed that a failed smoke assertion exits with status 1. These
-are individual observations on the implementation host, not deployment performance guarantees. The
-fixed 120-second request timeout leaves room for slower CPU loading; review it and the model keep-alive
-on deployment hardware. No latency or RAM budget has been established. Service-side 5xx failures were
-covered by mocked HTTP tests rather than induced in the real runtime.
+A pull that runs reuses cached layers (approximately 0.81 seconds in this run). Every start attempts
+`ollama pull` to refresh the tag; if the registry is unavailable, the entrypoint falls back to the
+cached model via `ollama show`, so a warm restart works offline. These are individual observations on
+the implementation host, not deployment performance guarantees. Each attempt has a fixed 120-second
+timeout and timeouts are not retried. Requests use a 30-minute `keep_alive`, so shorter idle periods do
+not pay the cold load again. Review the timeout and keep-alive on deployment hardware. No latency or
+RAM budget has been established. Service-side 5xx failures were covered by mocked HTTP tests rather
+than induced in the real runtime.
 
 For reproducibility, record the full model digest after initialization (the fixed model tag can be
 updated upstream):
@@ -270,7 +257,7 @@ docker compose -f docker-compose.development.yaml exec ollama ollama list
 curl --fail http://127.0.0.1:11434/api/tags
 ```
 
-The development stack and the CPU smoke suite run in CI; validate the production configuration with
+The development stack runs in CI; validate the production configuration with
 `docker compose -f docker-compose.yaml config --quiet` after changing it. Probe edge inputs with the
 debugging utility and inspect HTTP statuses/bodies directly with `POST /api/embed` when recording
 runtime behavior. Do not delete application or database volumes for embedding checks.

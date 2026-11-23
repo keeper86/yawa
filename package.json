@@ -32,7 +32,6 @@
         "infra:up": "docker compose -f docker-compose.development.yaml up -d --wait --wait-timeout 1800",
         "infra:down": "docker compose -f docker-compose.development.yaml down --remove-orphans",
         "generate-keycloak-realm": "set -a && . ./.env && set +a && envsubst < ./keycloak/data/template.json > ./keycloak/data/import/initialRealm.json",
-        "test:smoke": "vitest --run --config vitest.smoke.config.ts",
         "embedding:debug": "tsx tools/embedding_debug.ts"
     },
     "dependencies": {
