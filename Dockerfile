@@ -16,7 +16,7 @@ RUN \
 
 FROM deps AS embedding-smoke
 COPY tsconfig.json vitest.smoke.config.ts ./
-COPY src/server/embedding.ts ./src/server/embedding.ts
+COPY src/ ./src/
 COPY tests/smoke/ ./tests/smoke/
 COPY tools/embedding_debug.ts ./tools/embedding_debug.ts
 CMD ["npm", "run", "test:smoke"]

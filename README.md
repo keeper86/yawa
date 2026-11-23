@@ -17,7 +17,7 @@ Install [nvm](https://github.com/nvm-sh/nvm) and use it to install the node vers
 
 ### Docker Setup
 
-Install [docker](https://docs.docker.com/engine/install/)
+Install [docker](https://docs.docker.com/engine/install/). Use Docker Compose v2.
 
 ## Production
 
@@ -76,11 +76,12 @@ npm run db:types:update     # regenerate src/types/db_schemas.ts
 ### Run
 
 ```sh
-docker compose -f docker-compose.development.yaml up -d
-# Wait for model initialization and propagate a failed download's exit status.
-docker compose -f docker-compose.development.yaml up --no-deps --exit-code-from ollama-init ollama-init
-npm run dev                                            # app on http://localhost:3000
+npm run infra:up   # db + keycloak + ollama, waits for the embedding model
+npm run dev        # app on http://localhost:3000
 ```
+
+`npm run infra:up` starts the database, Keycloak and Ollama and waits for the embedding model;
+`npm run infra:down` stops them.
 
 ## Testing
 
@@ -94,7 +95,7 @@ Runs formatting, linting, type-checking and all tests. The CI pipeline (`.github
 npm run test:unit       # jsdom unit/component tests (vitest)
 npm run test:server     # integration tests against a throwaway Postgres (testcontainers)
 npm run test:e2e        # Playwright end-to-end tests
-npm run test:smoke      # real CPU embeddings; requires initialized Ollama
+npm run test:smoke      # real CPU embeddings; run npm run infra:up first
 ```
 
 ## Types
@@ -119,49 +120,67 @@ Backend callers import the shared module directly; importing it requires no data
 app startup, or network access:
 
 ```ts
-import { embedText } from '@/server/embedding';
+import { embedDocument, embedDocuments, embedQuery, embedText, embedTexts } from '@/server/embedding';
 
-const vector: number[] = await embedText('A text to embed');
+const documentVector: number[] = await embedDocument('One chunk');
+const documentVectors: number[][] = await embedDocuments(['First chunk', 'Second chunk']);
+const questionVector: number[] = await embedQuery('How do I grow tomatoes?');
+const rawVector: number[] = await embedText('Unprefixed text');
 ```
 
-The model is fixed to `embeddinggemma:300m`, with the full 768-dimensional output. The official
-`ollama/ollama:0.11.10` image is pinned in all three Compose stacks; this release introduced
-[EmbeddingGemma support](https://github.com/ollama/ollama/releases/tag/v0.11.10).
-Inference runs on CPU with no GPU devices assigned. The first startup requires internet access to
-pull the image and download the model (approximately 622 MB). Model files persist in the
-`ollama_data` named volume. Later initializations pull the same fixed tag and reuse cached layers;
-registry access can still be required to check the manifest. `docker compose down` retains volumes;
-avoid `down -v` if you want to retain model and database data.
+`embedQuery`, `embedDocument` and `embedDocuments` apply EmbeddingGemma's recommended task prompts
+(`task: question answering | query: …` and `title: none | text: …`). Retrieval and ingestion should use
+them. `embedText` and `embedTexts` send the input unchanged and remain available for diagnostics and
+prompt experiments.
 
-`ollama list` establishes daemon health only. The `ollama-init` service pulls the model and must exit
-successfully before containerized apps and smoke runners start. A failed download prevents those
-dependent services from starting. The host-run development app must use the explicit initialization
-wait command above. CI bounds infrastructure startup and model initialization to 15 minutes.
+`embedTexts` sends at most `EMBEDDING_BATCH_SIZE` (8) inputs per request, sequentially, and returns one
+vector per input in input order. An empty array returns an empty array without a request. Ollama's
+batch endpoint takes an array, so a 100-chunk document costs 13 requests instead of 100.
 
-Development publishes Ollama only on `127.0.0.1:11434`. The module defaults to
-`http://127.0.0.1:11434` when `OLLAMA_BASE_URL` is unset. Production (`docker-compose.yaml`) and local
-containerized development (`docker-compose.local.yaml`) keep Ollama private on the Compose network.
-They explicitly set `OLLAMA_BASE_URL=http://ollama:11434` for callers, overriding a host development
-value. Production starts with `docker compose up -d`; the local stack starts with
-`docker compose -f docker-compose.local.yaml up -d --build`.
+The model is fixed to `embeddinggemma:300m`, with the full 768-dimensional output. Production
+(`docker-compose.yaml`) and development (`docker-compose.development.yaml`) each define the same Ollama
+service; development only adds the published host port. The model tag lives in
+`docker/ollama-entrypoint.sh` and `src/server/embedding.ts`.
+This release introduced [EmbeddingGemma support](https://github.com/ollama/ollama/releases/tag/v0.11.10).
+Inference runs on CPU with no GPU devices assigned.
 
-The module sends the original string unchanged to `/api/embed` with `truncate: false`; it never trims
-or rejects strings based on their contents. Non-string input throws `TypeError`. Empty and
-whitespace-only strings reach Ollama, but an empty or malformed embedding response is rejected.
-Over-context input is sent without truncation so the service can reject it. See the
-[Ollama embedding API](https://docs.ollama.com/api/embed).
+Ollama is one unit, not a daemon plus a separate initializer: `docker/ollama-entrypoint.sh` starts
+`ollama serve`, waits for the daemon, checks `ollama show` and pulls the model only when it is missing.
+The healthcheck calls the same script with `--check`, so `service_healthy` means "daemon running and
+model ready". Containerized apps and the smoke runner depend on that health, and `npm run infra:up` is
+a single `docker compose up -d --wait` that returns only when Ollama, the database and Keycloak are
+healthy.
+
+The first startup requires internet access to pull the image and download the model (approximately
+622 MB). Model files persist in the `ollama_data` named volume, so a warm start skips the pull and needs
+no registry access. `docker compose down` retains volumes; avoid `down -v` if you want to retain model
+and database data. A failed pull exits the container and prevents dependent services from starting.
+CI bounds infrastructure startup and model download to 15 minutes.
+
+Development publishes Ollama only on `127.0.0.1:11434`. Without `OLLAMA_BASE_URL` the module falls
+back to `http://127.0.0.1:11434` outside production; with `NODE_ENV=production` it throws
+`EmbeddingError` instead of silently calling localhost. Production keeps Ollama private on the Compose
+network and explicitly sets `OLLAMA_BASE_URL=http://ollama:11434` for the app, overriding a host
+development value. Production starts with `docker compose up -d`; development with `npm run infra:up`.
+
+The module sends raw text unchanged to `/api/embed` with `truncate: false` through `embedText` and
+`embedTexts`; the role-aware helpers only add the model prompt. It never trims or rejects strings based
+on their contents. Non-string input throws `TypeError`. Empty and whitespace-only strings reach Ollama,
+but an empty or malformed embedding response is rejected. Over-context input is sent without truncation
+so the service can reject it. See the [Ollama embedding API](https://docs.ollama.com/api/embed).
 
 All service, transport, timeout, JSON and vector validation failures throw `EmbeddingError`.
 Its `status` holds the HTTP status once headers have arrived (including 200 for an invalid successful
 response), otherwise `undefined`. Its standard `cause` retains the original exception, timeout
-exception, or HTTP error response body. Invalid vector shapes have no underlying exception.
-Messages contain neither submitted text nor service response bodies; the module never logs input.
-Treat `cause` as potentially sensitive if you log it. Requests have a fixed 120-second timeout covering
-connection, model loading, inference and response-body reading. This allows headroom over the measured cold request below;
-it is not a latency guarantee. There are no retries, fallback vectors, model substitutions, or
-model downloads in application code.
+exception, or HTTP error response body. Invalid vector shapes have no underlying exception, and a
+missing production `OLLAMA_BASE_URL` is reported the same way. Messages contain neither submitted text
+nor service response bodies; the module never logs input. Treat `cause` as potentially sensitive if
+you log it. Each request has a fixed 120-second timeout covering connection, model loading, inference
+and response-body reading. A batch is all-or-nothing: if any vector is missing, has the wrong
+dimension or contains a non-finite value, the whole call rejects. There are no retries, fallback
+vectors, model substitutions, or model downloads in application code.
 
-After development initialization:
+After `npm run infra:up`:
 
 ```sh
 npm run test:smoke
@@ -169,9 +188,10 @@ npm run embedding:debug -- "Text to embed"
 ```
 
 Both commands load `.env` without overriding explicitly supplied environment values. The smoke suite
-uses Node.js, calls the real shared module, and fails if the service/model is unavailable or the
-vectors are unusable or indistinguishable. It is excluded from the browser suite and has no database
-setup. Mocked module tests run in the server suite's `embedding` project without a database:
+uses Node.js, calls the real shared module, and checks that the vectors are valid and that a related
+sentence ranks closer to the question than an unrelated one. It is excluded from the browser suite
+and has no database setup. Mocked module tests, including single and batched requests, run in the
+server suite's `embedding` project without a database:
 
 ```sh
 npm run test:server -- --project embedding
@@ -189,19 +209,42 @@ docker compose -f docker-compose.yaml --profile embedding-smoke run --build --rm
 docker compose -f docker-compose.yaml --profile embedding-smoke run --build --rm embedding-smoke npm run embedding:debug -- "Text to embed"
 ```
 
-Use the same commands with `-f docker-compose.local.yaml` for the local stack. The profile keeps the
-runner out of normal application startup.
+The profile keeps the runner out of normal application startup; it is only defined in the production
+stack. Use `npm run test:smoke` for the host-run development setup.
+
+### Embedding research
+
+On 2026-11-23, ten technical questions were ranked against ten matching sentences and ten unrelated
+sentences (20 candidate chunks, one relevant chunk per question):
+
+| Query form                             | hit@1 | hit@3 |
+| -------------------------------------- | ----- | ----- |
+| raw `embedText`                        | 7/10  | 9/10  |
+| `task: search result \| query: …`      | 10/10 | 10/10 |
+| `task: question answering \| query: …` | 10/10 | 10/10 |
+
+Document prompts (`title: none | text: …`) were used for both prefixed runs. The raw miss was "How many
+numbers does the embedding model return per text?", which ranked the 768-dimension sentence seventh.
+This is why the role-aware helpers exist.
+
+Dilution: a 3,023-character text scored cosine 0.67, 0.45 and 0.57 against its three parts (1,020, 909
+and 1,092 characters). A long chunk averages several ideas, so chunking well below the context limit
+is justified.
+
+Context: 2,047 repetitions of `hello ` succeed with `truncate: false`; 2,048 fail with HTTP 400. The
+Ollama model reports `num_ctx: 2048`, so the ceiling is effectively the full context window. The
+2,000-character chunk cap is far below it.
 
 ### Runtime verification
 
-Verified on 2026-11-06 using the official Ollama 0.11.10 Linux runtime on CPU (no GPU offload),
-with the same fixed model as Compose. The full downloaded model manifest digest was
+Verified on 2026-11-06 and re-verified on 2026-11-23 using the official Ollama 0.11.10 Linux runtime on
+CPU (no GPU offload), with the same fixed model as Compose. The full downloaded model manifest digest was
 `sha256:85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1` (621,875,917 bytes of model data).
 The real Vitest smoke suite and manual debugging command passed through the shared module.
 
 | Probe                                              | Observed result                                                                                  |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| First download into an empty temporary cache       | Approximately 13.4 seconds                                                                       |
+| First download into an empty temporary cache       | Approximately 13.4 seconds (network-dependent)                                                   |
 | First embedding after model download               | HTTP 200, one 768-value vector; 959 ms wall time, including 812 ms reported load time            |
 | Subsequent unrelated text                          | HTTP 200, one 768-value vector; 217 ms wall time                                                 |
 | Empty string                                       | HTTP 200 with `embeddings: []`; the module rejects this as an invalid vector                     |
@@ -210,17 +253,14 @@ The real Vitest smoke suite and manual debugging command passed through the shar
 | Missing model                                      | HTTP 404, error body identifying the missing model and suggesting a pull                         |
 | Numeric input sent directly to Ollama              | HTTP 400, `{"error":"invalid input type"}`; module callers are rejected earlier with `TypeError` |
 
-A repeated pull succeeded using cached layers in approximately 0.81 seconds. The smoke suite also
-passed after restarting the standalone daemon with the same cache. A temporary service returning
-zero-norm vectors confirmed that a failed smoke assertion exits with status 1. These are individual
-observations on the implementation host, not deployment performance guarantees. The fixed 120-second request timeout leaves room for
-slower CPU loading; review it on deployment hardware. No latency or RAM budget has been established.
-Service-side 5xx failures were covered by mocked HTTP tests rather than induced in the real runtime.
-
-This environment has no Docker daemon. All three Compose configurations validate, but Docker image
-builds, fresh/cached named-volume startup and initialization-failure dependency gating still require
-verification on a Docker-capable host. The real CPU tests used a temporary standalone Ollama process,
-not Compose. No application or database volumes were removed.
+A pull that runs reuses cached layers (approximately 0.81 seconds in this run); the entrypoint skips
+the pull entirely when `ollama show` finds the model, so a warm restart needs no registry access.
+The smoke suite also passed after restarting the standalone daemon with the same cache. A temporary
+service returning zero-norm vectors confirmed that a failed smoke assertion exits with status 1. These
+are individual observations on the implementation host, not deployment performance guarantees. The
+fixed 120-second request timeout leaves room for slower CPU loading; review it and the model keep-alive
+on deployment hardware. No latency or RAM budget has been established. Service-side 5xx failures were
+covered by mocked HTTP tests rather than induced in the real runtime.
 
 For reproducibility, record the full model digest after initialization (the fixed model tag can be
 updated upstream):
@@ -230,8 +270,7 @@ docker compose -f docker-compose.development.yaml exec ollama ollama list
 curl --fail http://127.0.0.1:11434/api/tags
 ```
 
-Probe edge inputs using the debugging utility and inspect HTTP statuses/bodies directly with
-`POST /api/embed` when recording runtime behavior. Restart with the same volume and repeat the
-initialization wait and smoke commands to verify cached startup. Do not delete application or
-database volumes for embedding checks. The dedicated smoke suite returns a failing process exit
-status on a failed request or assertion.
+The development stack and the CPU smoke suite run in CI; validate the production configuration with
+`docker compose -f docker-compose.yaml config --quiet` after changing it. Probe edge inputs with the
+debugging utility and inspect HTTP statuses/bodies directly with `POST /api/embed` when recording
+runtime behavior. Do not delete application or database volumes for embedding checks.

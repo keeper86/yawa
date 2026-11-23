@@ -1,27 +1,21 @@
 services:
     ollama:
         image: ollama/ollama:0.11.10
+        restart: unless-stopped
         environment:
             OLLAMA_HOST: 0.0.0.0:11434
             CUDA_VISIBLE_DEVICES: '-1'
             ROCR_VISIBLE_DEVICES: '-1'
         volumes:
             - ollama_data:/root/.ollama
+            - ./docker/ollama-entrypoint.sh:/usr/local/bin/ollama-entrypoint.sh:ro
+        entrypoint: ['/bin/sh', '/usr/local/bin/ollama-entrypoint.sh']
         healthcheck:
-            test: ['CMD', 'ollama', 'list']
+            test: ['CMD', '/bin/sh', '/usr/local/bin/ollama-entrypoint.sh', '--check']
             interval: 5s
             timeout: 5s
-            retries: 30
-
-    ollama-init:
-        image: ollama/ollama:0.11.10
-        environment:
-            OLLAMA_HOST: http://ollama:11434
-        depends_on:
-            ollama:
-                condition: service_healthy
-        command: ['pull', 'embeddinggemma:300m']
-        restart: 'no'
+            retries: 3
+            start_period: 30m
 
     embedding-smoke:
         profiles: ['embedding-smoke']
@@ -32,8 +26,8 @@ services:
         environment:
             OLLAMA_BASE_URL: http://ollama:11434
         depends_on:
-            ollama-init:
-                condition: service_completed_successfully
+            ollama:
+                condition: service_healthy
 
     caddy:
         image: caddy:alpine
@@ -61,8 +55,8 @@ services:
             OLLAMA_BASE_URL: http://ollama:11434
             DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
         depends_on:
-            ollama-init:
-                condition: service_completed_successfully
+            ollama:
+                condition: service_healthy
             db:
                 condition: service_healthy
             migrations:

@@ -1,15 +1,29 @@
 import { expect, it } from 'vitest';
-import { EMBEDDING_DIMENSION, embedText } from '@/server/embedding';
+import { EMBEDDING_DIMENSION, embedDocuments, embedQuery } from '@/server/embedding';
 
-it('embeds two unrelated texts into distinct, usable vectors on the real service', async () => {
-    const first = await embedText('A gardener plants tomatoes in the warm spring soil.');
-    const second = await embedText('A spacecraft measures radiation near the rings of Saturn.');
+const cosineSimilarity = (left: number[], right: number[]): number => {
+    const denominator = Math.hypot(...left) * Math.hypot(...right);
+    if (denominator === 0) {
+        throw new Error('Cannot compare a zero-length embedding vector.');
+    }
+    return left.reduce((sum, value, index) => sum + value * right[index], 0) / denominator;
+};
 
-    for (const vector of [first, second]) {
+it('ranks related text closer than unrelated text on the real service', async () => {
+    const queryVector = await embedQuery('How do I grow tomatoes?');
+    const [relatedVector, unrelatedVector] = await embedDocuments([
+        'Tomatoes need warm soil and regular watering.',
+        'A spacecraft measures radiation near the rings of Saturn.',
+    ]);
+
+    for (const vector of [queryVector, relatedVector, unrelatedVector]) {
         expect(vector).toHaveLength(EMBEDDING_DIMENSION);
         expect(vector.every((value) => typeof value === 'number' && Number.isFinite(value))).toBe(true);
         expect(Math.hypot(...vector)).toBeGreaterThan(0);
         expect(vector.some((value) => Math.abs(value - vector[0]) > 1e-8)).toBe(true);
     }
-    expect(first.some((value, index) => Math.abs(value - second[index]) > 1e-6)).toBe(true);
+    expect(queryVector.some((value, index) => Math.abs(value - unrelatedVector[index]) > 1e-6)).toBe(true);
+    expect(cosineSimilarity(queryVector, relatedVector)).toBeGreaterThan(
+        cosineSimilarity(queryVector, unrelatedVector),
+    );
 });

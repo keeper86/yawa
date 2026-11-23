@@ -53,9 +53,7 @@ jobs:
               run: npm run build
             - name: Start infrastructure and initialize embedding model
               timeout-minutes: 15
-              run: |
-                  timeout 840s docker compose -f docker-compose.development.yaml up -d
-                  timeout 840s docker compose -f docker-compose.development.yaml up --no-deps --exit-code-from ollama-init ollama-init
+              run: timeout 840s npm run infra:up
             - name: Run embedding smoke test on CPU
               timeout-minutes: 6
               run: npm run test:smoke

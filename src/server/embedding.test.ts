@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { EMBEDDING_MODEL, EMBEDDING_TIMEOUT_MS, EmbeddingError, embedText } from './embedding';
+import {
+    EMBEDDING_BATCH_SIZE,
+    EMBEDDING_MODEL,
+    EMBEDDING_TIMEOUT_MS,
+    EmbeddingError,
+    embedDocument,
+    embedDocuments,
+    embedQuery,
+    embedText,
+    embedTexts,
+} from './embedding';
 
 const vector = Array.from({ length: 768 }, (_, index) => index / 768);
 
@@ -35,6 +45,20 @@ describe('embedText', () => {
         respond({ embeddings: [vector] });
         await embedText('text');
         expect(vi.mocked(fetch).mock.calls[0][0].toString()).toBe('http://127.0.0.1:11434/api/embed');
+    });
+
+    it('requires OLLAMA_BASE_URL in production', async () => {
+        vi.stubEnv('NODE_ENV', 'production');
+        vi.stubEnv('OLLAMA_BASE_URL', undefined);
+        const request = vi.fn();
+        vi.stubGlobal('fetch', request);
+
+        await expect(embedText('text')).rejects.toMatchObject({
+            name: 'EmbeddingError',
+            message: 'OLLAMA_BASE_URL is not configured.',
+            status: undefined,
+        });
+        expect(request).not.toHaveBeenCalled();
     });
 
     it.each([null, undefined, 123, {}, ['text']])('rejects non-string input %j without a request', async (text) => {
@@ -135,5 +159,171 @@ describe('embedText', () => {
         respond({ embeddings: [vector] });
         await embedText('text');
         expect(vi.getTimerCount()).toBe(0);
+    });
+});
+
+describe('embedTexts', () => {
+    const reversed = [...vector].reverse();
+
+    it('sends one request and preserves the input order', async () => {
+        vi.stubEnv('OLLAMA_BASE_URL', 'http://embedding.internal:11434/');
+        respond({ embeddings: [vector, reversed] });
+
+        await expect(embedTexts(['first', 'second'])).resolves.toEqual([vector, reversed]);
+        expect(fetch).toHaveBeenCalledExactlyOnceWith(new URL('http://embedding.internal:11434/api/embed'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: EMBEDDING_MODEL, input: ['first', 'second'], truncate: false }),
+            signal: expect.any(AbortSignal),
+        });
+    });
+
+    it('splits input into batches and returns every vector in order', async () => {
+        const texts = Array.from({ length: EMBEDDING_BATCH_SIZE * 2 + 1 }, (_, index) => `text ${index}`);
+        const request = vi.fn();
+        for (const size of [EMBEDDING_BATCH_SIZE, EMBEDDING_BATCH_SIZE, 1]) {
+            request.mockResolvedValueOnce(
+                new Response(JSON.stringify({ embeddings: Array.from({ length: size }, () => vector) })),
+            );
+        }
+        vi.stubGlobal('fetch', request);
+
+        const result = await embedTexts(texts);
+
+        expect(result).toHaveLength(texts.length);
+        expect(request).toHaveBeenCalledTimes(3);
+        expect(request.mock.calls.map((call) => JSON.parse(call[1]?.body as string).input)).toEqual([
+            texts.slice(0, EMBEDDING_BATCH_SIZE),
+            texts.slice(EMBEDDING_BATCH_SIZE, EMBEDDING_BATCH_SIZE * 2),
+            texts.slice(EMBEDDING_BATCH_SIZE * 2),
+        ]);
+    });
+
+    it('returns no vectors for an empty input without a request', async () => {
+        const request = vi.fn();
+        vi.stubGlobal('fetch', request);
+
+        await expect(embedTexts([])).resolves.toEqual([]);
+        expect(request).not.toHaveBeenCalled();
+    });
+
+    it.each([null, undefined, 'text', 123, {}, ['valid', 1], new Array(2)])(
+        'rejects invalid input %j without a request',
+        async (texts) => {
+            const request = vi.fn();
+            vi.stubGlobal('fetch', request);
+
+            await expect(embedTexts(texts as string[])).rejects.toThrow(TypeError);
+            expect(request).not.toHaveBeenCalled();
+        },
+    );
+
+    it('rejects when the service returns a different number of vectors', async () => {
+        respond({ embeddings: [vector] });
+
+        await expect(embedTexts(['first', 'second'])).rejects.toThrow('Embedding service returned an invalid vector.');
+    });
+
+    it('rejects when any vector in a batch is invalid', async () => {
+        respond({ embeddings: [vector, vector.slice(1)] });
+
+        await expect(embedTexts(['first', 'second'])).rejects.toBeInstanceOf(EmbeddingError);
+    });
+
+    it('bounds a batch request with the same timeout', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockImplementation(() => new Promise(() => {})),
+        );
+
+        const result = embedTexts(['first', 'second']);
+        const assertion = expect(result).rejects.toMatchObject({
+            name: 'EmbeddingError',
+            message: 'Embedding request timed out.',
+            status: undefined,
+            cause: expect.objectContaining({ name: 'TimeoutError' }),
+        });
+        await vi.advanceTimersByTimeAsync(EMBEDDING_TIMEOUT_MS);
+        await assertion;
+        expect(vi.getTimerCount()).toBe(0);
+    });
+});
+
+describe('role-aware helpers', () => {
+    it('prefixes a question for retrieval', async () => {
+        respond({ embeddings: [vector] });
+
+        await expect(embedQuery('How do I grow tomatoes?')).resolves.toEqual(vector);
+        expect(fetch).toHaveBeenCalledExactlyOnceWith(
+            expect.any(URL),
+            expect.objectContaining({
+                body: JSON.stringify({
+                    model: EMBEDDING_MODEL,
+                    input: 'task: question answering | query: How do I grow tomatoes?',
+                    truncate: false,
+                }),
+            }),
+        );
+    });
+
+    it('prefixes a document', async () => {
+        respond({ embeddings: [vector] });
+
+        await expect(embedDocument('Tomatoes need warm soil.')).resolves.toEqual(vector);
+        expect(fetch).toHaveBeenCalledExactlyOnceWith(
+            expect.any(URL),
+            expect.objectContaining({
+                body: JSON.stringify({
+                    model: EMBEDDING_MODEL,
+                    input: 'title: none | text: Tomatoes need warm soil.',
+                    truncate: false,
+                }),
+            }),
+        );
+    });
+
+    it('prefixes every document in a batch', async () => {
+        const reversed = [...vector].reverse();
+        respond({ embeddings: [vector, reversed] });
+
+        await expect(embedDocuments(['first', 'second'])).resolves.toEqual([vector, reversed]);
+        expect(fetch).toHaveBeenCalledExactlyOnceWith(
+            expect.any(URL),
+            expect.objectContaining({
+                body: JSON.stringify({
+                    model: EMBEDDING_MODEL,
+                    input: ['title: none | text: first', 'title: none | text: second'],
+                    truncate: false,
+                }),
+            }),
+        );
+    });
+
+    it.each([null, undefined, 123, {}, ['valid', 1], new Array(2)])(
+        'rejects invalid document input %j without a request',
+        async (texts) => {
+            const request = vi.fn();
+            vi.stubGlobal('fetch', request);
+
+            await expect(embedDocuments(texts as string[])).rejects.toThrow(TypeError);
+            expect(request).not.toHaveBeenCalled();
+        },
+    );
+
+    it.each([null, undefined, 123, {}])('rejects invalid query input %j without a request', async (text) => {
+        const request = vi.fn();
+        vi.stubGlobal('fetch', request);
+
+        await expect(embedQuery(text as string)).rejects.toThrow(TypeError);
+        expect(request).not.toHaveBeenCalled();
+    });
+
+    it('returns no vectors for an empty document batch', async () => {
+        const request = vi.fn();
+        vi.stubGlobal('fetch', request);
+
+        await expect(embedDocuments([])).resolves.toEqual([]);
+        expect(request).not.toHaveBeenCalled();
     });
 });

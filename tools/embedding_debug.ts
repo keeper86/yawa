@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { readFile } from 'node:fs/promises';
-import { EMBEDDING_MODEL, EmbeddingError, embedText } from '../src/server/embedding';
+import { EMBEDDING_MODEL, EmbeddingError, embedText, embedTexts } from '../src/server/embedding';
 
 dotenv.config({ override: false, quiet: true });
 
@@ -63,12 +63,12 @@ async function main() {
     const start = performance.now();
     if (query !== undefined) {
         const queryVector = await embedText(query);
-        const results = [];
-        // Embed sequentially to avoid flooding the local CPU service with requests.
-        for (const [index, text] of texts.entries()) {
-            const vector = await embedText(text);
-            results.push({ index: index + 1, text, cosineDistance: cosineDistance(queryVector, vector) });
-        }
+        const vectors = await embedTexts(texts);
+        const results = texts.map((text, index) => ({
+            index: index + 1,
+            text,
+            cosineDistance: cosineDistance(queryVector, vectors[index]),
+        }));
         results.sort((a, b) => a.cosineDistance - b.cosineDistance || a.index - b.index);
         console.log(
             JSON.stringify(
