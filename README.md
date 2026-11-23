@@ -145,17 +145,22 @@ This release introduced [EmbeddingGemma support](https://github.com/ollama/ollam
 Inference runs on CPU with no GPU devices assigned.
 
 Ollama is one unit, not a daemon plus a separate initializer: `docker/ollama-entrypoint.sh` starts
-`ollama serve`, waits for the daemon, attempts `ollama pull` to refresh the tag and falls back to the
-cached model (`ollama show`) when the registry is unavailable. The healthcheck calls the same script
-with `--check`, so `service_healthy` means "daemon running and model ready". Containerized apps depend
-on that health, and `npm run infra:up` is a single `docker compose up -d --wait` that returns only when
-Ollama, the database and Keycloak are healthy.
+`ollama serve`, waits for the daemon, checks for the model with `ollama show` and pulls only when it is
+missing. A warm volume therefore never contacts the registry. The healthcheck calls the same script with
+`--check`, so `service_healthy` means "daemon running and model ready". Containerized apps depend on that
+health, and `npm run infra:up` is a single `docker compose up -d --wait` that returns only when Ollama,
+the database and Keycloak are healthy.
 
 The first startup requires internet access to pull the image and download the model (approximately
-622 MB). Model files persist in the `ollama_data` named volume. Every start attempts `ollama pull` to
-refresh the tag and falls back to the cached model when the registry is unavailable, so a warm start
-works offline. `docker compose down` retains volumes; avoid `down -v` if you want to retain model and
-database data. Startup fails only when neither the registry nor the cache can provide the model.
+622 MB). Model files persist in the `ollama_data` named volume, so later starts reuse them without
+touching the registry. `docker compose down` retains volumes; avoid `down -v` if you want to retain model
+and database data. Startup fails only when the model is missing and the registry cannot provide it. To
+refresh the tag deliberately, pull it inside the container and restart it:
+
+```sh
+docker compose -f docker-compose.development.yaml exec ollama ollama pull embeddinggemma:300m
+```
+
 CI bounds infrastructure startup and model download to 15 minutes.
 
 Development publishes Ollama only on `127.0.0.1:11434`. Without `OLLAMA_BASE_URL` the module falls
@@ -259,10 +264,9 @@ The manual debugging command passed through the shared module.
 | Missing model                                      | HTTP 404, error body identifying the missing model and suggesting a pull                         |
 | Numeric input sent directly to Ollama              | HTTP 400, `{"error":"invalid input type"}`; module callers are rejected earlier with `TypeError` |
 
-A pull that runs reuses cached layers (approximately 0.81 seconds in this run). Every start attempts
-`ollama pull` to refresh the tag; if the registry is unavailable, the entrypoint falls back to the
-cached model via `ollama show`, so a warm restart works offline. These are individual observations on
-the implementation host, not deployment performance guarantees. Each attempt has a fixed 30-second
+A pull reuses cached layers (approximately 0.81 seconds for an explicit refresh). The entrypoint only
+pulls when `ollama show` reports the model missing, so a warm start never contacts the registry. These are
+individual observations on the implementation host, not deployment performance guarantees. Each attempt has a fixed 30-second
 timeout and timeouts are not retried. Requests use a 30-minute `keep_alive`, so shorter idle periods do
 not pay the cold load again. Review the timeout and keep-alive on deployment hardware. No latency or
 RAM budget has been established. Service-side 5xx failures were covered by mocked HTTP tests rather
