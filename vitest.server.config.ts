@@ -5,12 +5,28 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig({
     plugins: [react(), tsconfigPaths()],
     test: {
-        include: ['src/server/**/*.test.ts'],
         environment: 'node',
         env: {
             NODE_ENV: 'test',
         },
-        setupFiles: ['./tests/vitest/setupTestcontainer.ts'],
+        projects: [
+            {
+                extends: true,
+                test: {
+                    name: 'embedding',
+                    include: ['src/server/embedding.test.ts'],
+                },
+            },
+            {
+                extends: true,
+                test: {
+                    name: 'database',
+                    include: ['src/server/**/*.test.ts'],
+                    exclude: ['src/server/embedding.test.ts'],
+                    setupFiles: ['./tests/vitest/setupTestcontainer.ts'],
+                },
+            },
+        ],
         globals: true,
         typecheck: {
             tsconfig: './tsconfig.json',

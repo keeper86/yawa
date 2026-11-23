@@ -29,7 +29,11 @@
         "db:types:update": "node ./tools/db_types.cjs update",
         "i18n:scan": "node ./tools/i18n_scan.cjs && node ./tools/i18n_scan_literals.cjs",
         "db:waitFor": "npx wait-on --timeout=60000 tcp:localhost:5432",
-        "generate-keycloak-realm": "set -a && . ./.env && set +a && envsubst < ./keycloak/data/template.json > ./keycloak/data/import/initialRealm.json"
+        "infra:up": "docker compose -f docker-compose.development.yaml up -d --wait --wait-timeout 900",
+        "infra:down": "docker compose -f docker-compose.development.yaml down --remove-orphans",
+        "generate-keycloak-realm": "set -a && . ./.env && set +a && envsubst < ./keycloak/data/template.json > ./keycloak/data/import/initialRealm.json",
+        "embedding:debug": "tsx tools/embedding_debug.ts",
+        "embedding:smoke": "tsx tools/embedding_smoke.ts"
     },
     "dependencies": {
         "@radix-ui/react-accordion": "^1.2.12",
