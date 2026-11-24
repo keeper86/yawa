@@ -113,6 +113,60 @@ This project uses strict TypeScript for all application and API code:
 - `src/i18n` — next-intl configuration, catalogs and helpers.
 - `src/lib` — framework-agnostic helpers (routing, charts, timeline, utils).
 
+## PDF to Markdown
+
+Backend callers can use the converter directly in the Node.js runtime:
+
+```ts
+import { readFile } from 'node:fs/promises';
+import { pdfToMarkdownPages } from '@/server/pdf2md';
+
+const pages = await pdfToMarkdownPages(await readFile('/path/document.pdf'));
+// [{ pageNumber: 1, markdown: '# Heading\n...' }, ...]
+```
+
+The function accepts a `Uint8Array` or `Buffer` and returns one entry per physical PDF page,
+in order, numbered from 1. Blank pages remain empty entries. It uses `@nalinor/mupdf4llm`
+for native text, headings, lists, and Markdown tables; this version has no HTML table output.
+Images and their references are omitted, while native captions remain text.
+
+Image-only pages use Tesseract OCR with both German and English models. A page with fewer
+than 200 non-whitespace native characters also uses OCR when a raster image covers at least
+half the page, so a selectable footer does not hide a scanned body. OCR replaces that page's
+native extraction, preserves readable text and escapes Markdown/HTML punctuation. Scanned
+tables are plain text; exact layout, complex scans, and scanned inserts within otherwise
+native-text pages are not guaranteed.
+
+The German and English models are installed as npm dependencies. No database, Ollama,
+credentials, or runtime downloads are needed. One OCR worker is reused within a conversion
+and terminated afterward. Models are copied into a temporary directory for worker startup,
+then removed; the deployed app needs a writable system temporary directory, with no cache
+writes in the app directory. The Next.js configuration keeps the worker, WASM, and language
+assets in standalone builds for future backend callers. Edge runtime is unsupported.
+
+Conversion errors throw `PdfConversionError`, with the underlying error in `cause` and a
+page number when the failure occurs during page inspection/OCR. Password-protected PDFs are
+unsupported. Failures reject the whole conversion; there is no partial success result or
+application-level page limit. Memory and processing time still depend on the input.
+
+Local testing:
+
+```sh
+npm run pdf:debug -- "/path/document.pdf"
+npm run pdf:debug -- "/path/document.pdf" --out "/path/document.md"
+npm run pdf:smoke
+```
+
+The debug utility combines the pages into readable Markdown with `## Page N` headings and
+horizontal separators, then prints it or saves it with `--out`. It refuses to overwrite an
+existing file. For Markdown-only stdout, use `npm run --silent pdf:debug -- "/path/document.pdf"`.
+The backend function continues to return separate page entries.
+The smoke command runs real extraction and OCR on committed synthetic PDFs, including a
+table, an illustration, German/English scans, a native footer over a scan, and a blank page.
+It also checks corrupt and empty inputs. CI runs it without starting application services.
+The fixture generator lives at `tests/fixtures/pdf/generate.py` and requires ReportLab,
+Pillow, and an Arial-compatible TrueType font (set `PDF_FIXTURE_FONT` on Linux).
+
 ## Text embeddings
 
 Backend callers import the shared module directly; importing it requires no database, authentication,

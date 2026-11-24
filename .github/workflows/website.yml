@@ -38,6 +38,9 @@ jobs:
               run: npm run lint:check
             - name: Type check
               run: npx next typegen && npx tsc --noEmit
+            - name: Verify PDF extraction and German/English OCR
+              timeout-minutes: 3
+              run: npm run pdf:smoke
             - name: Run unit tests
               run: npm run test:unit
             - name: Run integration tests
