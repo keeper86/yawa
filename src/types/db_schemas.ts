@@ -2,6 +2,7 @@
 // Do not touch them, or risk, your modifications being lost.
 
 export enum Table {
+    Documents = 'documents',
     KnexMigrations = 'knex_migrations',
     KnexMigrationsLock = 'knex_migrations_lock',
     Messages = 'messages',
@@ -11,12 +12,25 @@ export enum Table {
 }
 
 export type Tables = {
+    documents: Documents;
     knex_migrations: KnexMigrations;
     knex_migrations_lock: KnexMigrationsLock;
     messages: Messages;
     personal_access_tokens: PersonalAccessTokens;
     personal_access_tokens_logs: PersonalAccessTokensLogs;
     user_data: UserData;
+};
+
+export type Documents = {
+    id: string;
+    user_id: string;
+    filename: string;
+    content_sha256: string;
+    byte_size: number;
+    page_count: number | null;
+    content: Buffer;
+    status: string;
+    created_at: Date;
 };
 
 export type KnexMigrations = {
