@@ -20,6 +20,7 @@
         "test:server:watch": "vitest --watch --config vitest.server.config.ts",
         "test:coverage": "vitest --coverage",
         "test:e2e": "playwright test",
+        "test:smoke:deepseek": "node --env-file=.env tools/deepseek-smoke.mjs",
         "test:all": "npm run format && npm run lint && npx tsc && npm run test",
         "db:migrate:make": "npx knex migrate:make",
         "db:migrate:latest": "npx knex migrate:latest",
@@ -88,6 +89,8 @@
     "devDependencies": {
         "@eslint/eslintrc": "^3",
         "@eslint/js": "^9.35.0",
+        "@langchain/core": "^1.4.2",
+        "@langchain/openai": "^1.8.4",
         "@playwright/test": "^1.64.0",
         "@tailwindcss/postcss": "^4",
         "@testcontainers/postgresql": "^12.2.0",
